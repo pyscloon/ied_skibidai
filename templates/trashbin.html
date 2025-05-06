@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trash - WebWork</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-right">
+            <div class="logo">WebWork</div>
+            <input type="text" placeholder=" Search" class="search-bar">
+        </div>
+        <div class="nav-items">
+            <a href="#" class="nav-item">About</a>
+            <a href="#" class="nav-item">Contact</a>
+            <a href="#" class="nav-item">Login</a>
+            <a href="#" class="nav-item">Sign in</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-container">
+            <!-- Sidebar (Same as main page) -->
+            <aside class="sidebar">
+                <img src="imgs/lebron.jpg" alt="Profile" class="profile">
+                <div class="sidebar-items"> 
+                    <a href="messaging.html"><img src="imgs/message.png" alt="Archive"></a>
+                    <a href="trashbin.html"><img src="imgs/trash.png" alt="Trash"></a>
+                </div>
+                <div class="sidebar-footer">
+                    <a href="settings.html" class="settings-button">
+                        <img src="imgs/settings.png" alt="setting">
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Main trash content -->
+            <div class="main-content">
+                <div class="trash-header">
+                    <h2>Trash</h2>
+                    <p>Deleted conversations and contacts will appear here.</p>
+                </div>
+                <div class="trash-list" id="trash-list">
+                    <!-- The deleted contacts will be inserted here by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="trash.js"></script> <!-- Link to the trash.js script -->
+</body>
+</html>
