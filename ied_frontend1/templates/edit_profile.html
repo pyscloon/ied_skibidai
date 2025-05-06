@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0D1B2A] min-h-screen flex items-center justify-center p-6">
+    <div class="bg-[#001721] p-8 rounded-lg shadow-lg w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-white mb-6 text-center">Edit Profile</h1>
+        <form method="POST" class="space-y-4">
+            <input type="text" name="first_name" placeholder="First Name" value="{{ user.first_name or '' }}" class="w-full p-3 rounded-lg border focus:outline-none" required>
+            <input type="text" name="last_name" placeholder="Last Name" value="{{ user.last_name or '' }}" class="w-full p-3 rounded-lg border focus:outline-none" required>
+            <input type="text" name="gender" placeholder="Gender" value="{{ user.gender or '' }}" class="w-full p-3 rounded-lg border focus:outline-none">
+            <input type="text" name="country" placeholder="Country" value="{{ user.country or '' }}" class="w-full p-3 rounded-lg border focus:outline-none">
+            <input type="text" name="business" placeholder="Status" value="{{ user.business or '' }}" class="w-full p-3 rounded-lg border focus:outline-none">
+            <input type="text" name="time_zone" placeholder="Time Zone" value="{{ user.time_zone or '' }}" class="w-full p-3 rounded-lg border focus:outline-none">
+
+            <div class="flex justify-center space-x-4 pt-4">
+                <button type="submit" class="bg-[#e06833] hover:scale-105 text-white font-bold py-2 px-6 rounded-full">
+                    Save Changes
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-full">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

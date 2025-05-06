@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0D1B2A] min-h-screen flex items-center justify-center">
+    <section class="bg-[#001721] flex rounded-2xl shadow-lg p-8"> 
+        <div class="w-full max-w-xl px-4">
+            <h2 class="font-bold text-2xl text-white">Register to WebWork</h2>
+            <form method="POST" class="flex flex-col gap-4 mt-6">
+                {{ form.hidden_tag() }}
+            
+                    {{ form.username.label(class_="text-sm font-medium text-gray-500") }}
+                    {{ form.username(class="p-2 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-blue-300") }}
+                    {% for error in form.username.errors %}
+                    <span class="text-red-500 text-sm">{{ error }}</span>
+                    {% endfor %}
+        
+
+                    {{ form.email.label(class_="text-sm font-medium text-gray-500") }}
+                    {{ form.email(class="p-2 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-blue-300") }}
+                    {% for error in form.email.errors %}
+                    <span class="text-red-500 text-sm">{{ error }}</span>
+                    {% endfor %}     
+            
+
+                    {{ form.password.label(class_="text-sm font-medium text-gray-500") }}
+                    <div class="relative">
+                        {{ form.password(class="p-2 rounded-xl border w-full bg-white pr-10 focus:outline-none focus:ring-2 focus:ring-blue-300") }}
+                        {% for error in form.password.errors %}
+                        <span class="text-red-500 text-sm">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {{ form.submit(class="bg-[#d9561d] text-white border py-2 rounded-xl mt-4 text-sm font-medium hover:scale-105 duration-300") }}
+            </form>
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <ul>
+                        {% for msg in messages %}
+                            <li>{{ msg }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+            <div class="mt-6 text-center">
+                <p class="text-xs text-gray-500">Already have an account?</p>
+                 <a href="{{ url_for('login') }}">
+                    <button class="text-white mt-2 text-xs py-1 px-4 bg-[#e06833] border rounded-xl hover:scale-110 duration-300 ">
+                        Login
+                    </button>
+                </a>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
