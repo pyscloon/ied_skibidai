@@ -22,7 +22,7 @@ active_users = {}
 # MongoDB setup
 MONGO_URI = "mongodb+srv://adminuser:Adminuser@cluster0.l5edo4g.mongodb.net/webwork?retryWrites=true&w=majority&appName=Cluster0"  
 client = MongoClient(MONGO_URI)
-db = client['webwork']  #
+db = client['webwork']
 users_collection = db['users']
 users_collection.create_index('username')
 users_collection.create_index('email')
@@ -30,8 +30,9 @@ posts_collection = db['posts']
 businesses_collection = db['businesses']
 messages_collection = db['messages']
 messages_collection.create_index([('participants', 1), ('timestamp', -1)])
-messages_collection.create_index('sender')
-messages_collection.create_index('recipient')
+messages_collection.create_index([('sender', 1), ('recipient', 1)])
+messages_collection.create_index([('recipient', 1), ('sender', 1)])
+messages_collection.create_index([('recipient', 1), ('status', 1)])
 messages_collection.create_index('timestamp')
 messages_collection.create_index('persisted')
 conversations_collection = db['conversations']
@@ -130,6 +131,25 @@ class BusinessProfileForm(FlaskForm):
     bio = StringField('Business Bio', validators=[DataRequired()])
     submit = SubmitField('Finish Setup')
 
+# In your setup code
+jobs_collection = db['jobs']
+
+# Then in your route:
+@app.route('/jobs-projects-posting')  # URL path can be whatever you want
+def jobs_projects_posting():  # This is the endpoint name for url_for()
+    try:
+        # Get jobs from MongoDB and convert to list
+        jobs = list(jobs_collection.find({}, {'_id': 0}))  # Exclude MongoDB _id field
+        
+        # Debug output
+        print(f"Found {len(jobs)} jobs to display")
+        
+        # Render the template with the correct filename
+        return render_template('jobs_projects_posting.html', jobs=jobs)
+    except Exception as e:
+        print(f"Error loading jobs: {str(e)}")
+        return render_template('error.html', message="Could not load jobs"), 500
+    
 # start of messaging website also imput new import for socketio
 @app.route('/messaging')
 def messaging():
@@ -466,36 +486,39 @@ def handle_join_conversation(data):
                 'contact_id': contact_id,
                 'user_id': current_user.id
             }, room=room_name)
+
 @app.route('/get_conversation/<contact_id>')
 @login_required
 def get_conversation(contact_id):
-    # Get messages between current user and contact
-    messages = messages_collection.find({
-        '$or': [
-            {
-                'sender': current_user.id,
-                'recipient': contact_id
-            },
-            {
-                'sender': contact_id,
-                'recipient': current_user.id
-            }
-        ]
-    }).sort('timestamp', 1)
-    
-    # Convert to list and format
-    messages_list = []
-    for msg in messages:
-        messages_list.append({
-            'id': str(msg['_id']),
-            'sender': msg['sender'],
-            'recipient': msg['recipient'],  # Make sure to include recipient
-            'content': msg['content'],
-            'timestamp': msg['timestamp'].isoformat(),
-            'status': msg.get('status', 'sent')
-        })
-    
-    return jsonify({'messages': messages_list})
+    try:
+        # Validate contact exists
+        if not users_collection.find_one({'_id': ObjectId(contact_id)}):
+            return jsonify({'error': 'Contact not found'}), 404
+
+        # Get conversation messages with proper sender/recipient info
+        messages = messages_collection.find({
+            '$or': [
+                {'sender': current_user.id, 'recipient': contact_id},
+                {'sender': contact_id, 'recipient': current_user.id}
+            ]
+        }).sort('timestamp', 1)
+
+        messages_list = []
+        for msg in messages:
+            messages_list.append({
+                'id': str(msg['_id']),
+                'sender': str(msg['sender']),  # Ensure string type
+                'recipient': str(msg['recipient']),  # Ensure string type
+                'content': msg['content'],
+                'timestamp': msg['timestamp'].isoformat(),
+                'status': msg.get('status', 'sent'),
+                'is_current_user': str(msg['sender']) == current_user.id  # Add explicit flag
+            })
+
+        return jsonify({'messages': messages_list, 'current_user_id': current_user.id})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @socketio.on('typing')
 def handle_typing(data):
@@ -716,6 +739,7 @@ def upload_business_profile():
 def create_post():
     content = request.form.get('content')
     files = request.files.getlist('image')
+    is_business_post = request.form.get('is_business_post', 'false') == 'true'
 
     media_urls = []
     for file in files:
@@ -729,11 +753,19 @@ def create_post():
     utc_now = datetime.now(timezone.utc)  
     ph_time = utc_now.astimezone(ph_tz)
 
+    # Determine display name based on post type
+    if is_business_post and hasattr(current_user, 'business_name'):
+        display_name = current_user.business_name
+    else:
+        display_name = f"{current_user.first_name} {current_user.last_name}"
+
     post = {
         'content': content,
         'media': media_urls,
         'user_id': current_user.id,
         'username': current_user.username,
+        'display_name': display_name,  # Add this field
+        'is_business_post': is_business_post,
         'created_at_utc': utc_now,
         'created_at_local': ph_time,
         'timezone': 'Asia/Manila',

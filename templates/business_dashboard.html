@@ -104,14 +104,53 @@
                         {% endif %}
                         <div>
                             <p class="font-semibold">{{ (user.first_name or '') + ' ' + (user.last_name or '') }}</p>
-                            <select class="text-xs border-none bg-gray-100 rounded p-1">
-                                <option>Public</option>
-                                <option>Friends</option>
-                                <option>Only me</option>
-                            </select>
                         </div>
                     </div>
                 </div>
+
+                <!-- User Posts Section -->
+                <section class="p-6 max-w-4xl mx-auto mt-8 space-y-6">
+                    {% if posts %}
+                        {% for post in posts %}
+                        <div class="bg-white text-gray-800 rounded-lg shadow p-4">
+                            <div class="flex items-center space-x-4 mb-2">
+                                {% if business.profile_picture %}
+                                    <img src="{{ business.profile_picture }}" alt="Business Profile Picture" class="w-10 h-10 rounded-full object-cover">
+                                {% else %}
+                                    <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-semibold">{{ post.display_name }}</p> <!-- Use display_name -->
+                                    <p class="text-xs text-gray-500">{{ post.created_at.strftime('%b %d, %Y %I:%M %p') if post.created_at else '' }}</p>
+                                </div>
+                            </div>
+                            <p class="mb-4">{{ post.content }}</p>
+                            {% if post.media %}
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                {% for media_url in post.media %}
+                                    {% if media_url.endswith('.mp4') or media_url.endswith('.webm') or media_url.endswith('.ogg') %}
+                                        <video controls class="w-full rounded-lg">
+                                            <source src="{{ media_url }}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    {% else %}
+                                        <img src="{{ media_url }}" alt="Post Media" class="w-full rounded-lg">
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}                    
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-gray-500">No posts yet.</p>
+                    {% endif %}
+                </section>
+
+                
                 
                 <form id="postForm" action="/create-post" method="POST" enctype="multipart/form-data">
                     <textarea name="content" class="w-full h-32 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="What's on your mind?"></textarea>
@@ -264,6 +303,8 @@
             e.preventDefault();
             
             const formData = new FormData(this);
+            formData.append('content', postContent);
+            formData.append('is_business_post', 'true');
             
             try {
                 const response = await fetch('/create-post', {

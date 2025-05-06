@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WebWork Job Board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar for better appearance */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a3b47;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1f2c36;
+    }
+
+    /* Add subtle animation to category list */
+    .category-transition {
+      transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+    }
+
+    /* Button hover effects */
+    .btn-hover:hover {
+      background-color: #c04b19;
+    }
+
+    /* Smooth animation for expanding categories */
+    .category-item:hover {
+      background-color: #1f2c36;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+  </style>
+</head>
+<body class="bg-[#0e1b24] text-white font-sans">
+
+  <!-- Navbar -->
+  <header class="bg-[#0f0e2c] text-white flex justify-between items-center p-4 px-8 shadow-md">
+    <div class="text-2xl font-bold">WebWork</div>
+    
+    <!-- Search Bar -->
+    <div class="relative w-1/3">
+        <input 
+            type="text" 
+            id="userSearch" 
+            placeholder="Search users..." 
+            class="w-full py-1 px-4 pr-10 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+        <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        </div>
+        <!-- Search Results Dropdown -->
+        <div id="searchResults" class="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg hidden max-h-60 overflow-y-auto">
+            <!-- Results will be populated here -->
+        </div>
+    </div>
+    
+    <nav class="space-x-6 text-sm">
+        <a href="#" class="hover:underline">Contact</a>
+        <a href="{{ url_for('login') }}" class="hover:underline">Login</a>
+        <a href="{{ url_for('register') }}" class="hover:underline">Sign in</a>
+        <a href="{{ url_for('dashboard') }}" class="hover:underline">Profile</a>
+        <a href="{{ url_for('messaging') }}" class="text-white hover:underline">Message</a>
+    </nav>
+</header>
+
+  <div class="flex flex-col lg:flex-row">
+    <!-- Sidebar -->
+<!-- Sidebar -->
+<aside id="sidebar" class="lg:block w-full lg:w-64 bg-[#11212d] p-6 space-y-6 min-h-screen transition-all duration-300 sticky top-24 rounded-lg shadow-lg">
+
+  <!-- Categories Section -->
+  <div>
+    <h2 class="text-lg font-semibold mb-4 text-gray-300">Job Categories</h2>
+    <input type="checkbox" id="toggle-categories" class="hidden peer">
+    <div class="flex flex-col divide-y divide-gray-700 category-transition max-h-40 overflow-hidden peer-checked:max-h-full">
+
+      <!-- Each item now includes a checkbox -->
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Technology</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Remote</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Marketing</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Design</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Finance</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Education</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Healthcare</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Engineering</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Sales</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>HR</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Legal</span>
+      </label>
+
+      <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
+        <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
+        <span>Support</span>
+      </label>
+
+    </div>
+    <div class="flex justify-center mt-4">
+      <label for="toggle-categories" class="text-[#d9561d] font-semibold cursor-pointer">
+        <span class="peer-checked:hidden">Show More</span>
+        <span class="hidden peer-checked:inline">Show Less</span>
+      </label>
+    </div>
+  </div>
+</aside>
+
+
+<!-- Main Content -->
+<main class="flex-1 p-4 sm:p-6 space-y-6">
+
+  <section class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <!-- Job Card 1 -->
+    <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
+      <img src="./images/job1.jpg" alt="Software Engineer Project" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <h2 class="text-xl font-bold mb-2 text-white">Software Engineer</h2>
+      <p class="text-[#d9561d] mb-2">GoTechno Inc. - Remote</p>
+      <p class="text-gray-300 mb-4">Help build and scale modern web apps using cutting-edge technologies.</p>
+      <div class="flex gap-2 mb-4">
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Technology</span>
+      </div>
+      <button class="bg-[#d9561d] text-white px-6 py-2 rounded-full btn-hover">Apply Now</button>
+    </div>
+  
+    <!-- Job Card 2 -->
+    <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
+      <img src="./images/job2.jpg" alt="UI/UX Design" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <h2 class="text-xl font-bold mb-2 text-white">UI/UX Designer</h2>
+      <p class="text-[#d9561d] mb-2">CreativeX - New York, NY</p>
+      <p class="text-gray-300 mb-4">Design sleek, user-friendly interfaces for our mobile and web products.</p>
+      <div class="flex gap-2 mb-4">
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Design</span>
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Remote</span>
+      </div>
+      <button class="bg-[#d9561d] text-white px-6 py-2 rounded-full btn-hover">Apply Now</button>
+    </div>
+  
+    <!-- Job Card 3 -->
+    <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
+      <img src="./images/job3.jpg" alt="Marketing Strategy" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <h2 class="text-xl font-bold mb-2 text-white">Marketing Strategist</h2>
+      <p class="text-[#d9561d] mb-2">Growthly - San Francisco, CA</p>
+      <p class="text-gray-300 mb-4">Plan and execute creative marketing campaigns to boost brand awareness.</p>
+      <div class="flex gap-2 mb-4">
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Marketing</span>
+      </div>
+      <button class="bg-[#d9561d] text-white px-6 py-2 rounded-full btn-hover">Apply Now</button>
+    </div>
+  
+    <!-- Job Card 4 -->
+    <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
+      <img src="./images/job4.jpg" alt="Finance Analyst" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <h2 class="text-xl font-bold mb-2 text-white">Finance Analyst</h2>
+      <p class="text-[#d9561d] mb-2">FinLogic - Remote</p>
+      <p class="text-gray-300 mb-4">Analyze trends and provide financial insights to support business decisions.</p>
+      <div class="flex gap-2 mb-4">
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Finance</span>
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Remote</span>
+      </div>
+      <button class="bg-[#d9561d] text-white px-6 py-2 rounded-full btn-hover">Apply Now</button>
+    </div>
+  
+    <!-- Job Card 5 -->
+    <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
+      <img src="./images/job5.jpg" alt="Data Analysis" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <h2 class="text-xl font-bold mb-2 text-white">Data Analyst</h2>
+      <p class="text-[#d9561d] mb-2">DataWiz - Chicago, IL</p>
+      <p class="text-gray-300 mb-4">Interpret complex data to help drive business decisions and strategy.</p>
+      <div class="flex gap-2 mb-4">
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Data</span>
+      </div>
+      <button class="bg-[#d9561d] text-white px-6 py-2 rounded-full btn-hover">Apply Now</button>
+    </div>
+  
+    <!-- Job Card 6 -->
+    <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
+      <img src="./images/job6.jpg" alt="DevOps Tools" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <h2 class="text-xl font-bold mb-2 text-white">DevOps Engineer</h2>
+      <p class="text-[#d9561d] mb-2">CloudFlow - Seattle, WA</p>
+      <p class="text-gray-300 mb-4">Automate deployments and manage cloud infrastructure efficiently.</p>
+      <div class="flex gap-2 mb-4">
+        <span class="bg-[#d9561d] text-white px-3 py-1 rounded-full text-sm">#Infrastructure</span>
+      </div>
+      <button class="bg-[#d9561d] text-white px-6 py-2 rounded-full btn-hover">Apply Now</button>
+    </div>
+  
+  </section>
+  
+
+  <!-- Load More Button -->
+  <div class="text-center mt-6">
+    <button class="bg-gray-300 text-gray-500 px-6 py-2 rounded-md cursor-not-allowed">Load More Jobs</button>
+  </div>
+</main>
+
+  <!-- Sidebar Toggle Script -->
+  <script>
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('hidden');
+    }
+  </script>
+  <script>
+    document.querySelectorAll('.btn-hover').forEach(button => {
+      button.addEventListener('click', () => {
+        fetch('http://127.0.0.1:5000/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: 'example_job_id' })
+        })
+        .then(res => res.json())
+        .then(data => alert(data.message));
+      });
+    });
+  </script>
+  <script>
+    // Get all category checkboxes
+    const categoryCheckboxes = document.querySelectorAll('aside input[type="checkbox"]:not(#toggle-categories)');
+    
+    // Listen to changes on checkboxes
+    categoryCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', filterJobs);
+    });
+  
+    function filterJobs() {
+      // Get all selected categories
+      const selectedCategories = Array.from(categoryCheckboxes)
+        .filter(checkbox => checkbox.checked)
+        .map(checkbox => checkbox.nextElementSibling.textContent.trim().toLowerCase());
+      
+      // Get all job cards
+      const jobCards = document.querySelectorAll('main section > div');
+  
+      jobCards.forEach(card => {
+        // Get all tags inside this job card
+        const tags = Array.from(card.querySelectorAll('.flex.gap-2 span'))
+          .map(tag => tag.textContent.replace('#', '').toLowerCase());
+        
+        // If no category selected → show all
+        if (selectedCategories.length === 0) {
+          card.style.display = '';
+          return;
+        }
+  
+        // If any selected category matches a tag → show; else hide
+        const hasMatch = selectedCategories.some(category => tags.includes(category));
+        card.style.display = hasMatch ? '' : 'none';
+      });
+    }
+  </script>
+  
+
+</body>
+</html>
