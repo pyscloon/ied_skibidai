@@ -241,16 +241,17 @@ def get_available_users():
             })
 
     return jsonify({'users': user_list}), 200
-
 @app.route('/get_contacts')
 @login_required
 def get_contacts():
+    # Fetch the user by their ID
     user = users_collection.find_one({'_id': ObjectId(current_user.id)})
     if not user or 'contacts' not in user:
         return jsonify({'contacts': []})
     
-    # Get contact details and last messages
+    # List to store contact data
     contacts = []
+    
     for contact in user['contacts']:
         contact_user = users_collection.find_one(
             {'_id': ObjectId(contact['contact_id'])},
@@ -258,9 +259,12 @@ def get_contacts():
         )
         
         if contact_user:
-            # Get conversation data
+            # Ensure the participants list is sorted to avoid issues with ObjectId comparison
+            participants = sorted([ObjectId(current_user.id), ObjectId(contact['contact_id'])])
+            
+            # Find the conversation between the two users
             conversation = conversations_collection.find_one({
-                'participants': sorted([current_user.id, contact['contact_id']])
+                'participants': participants  # Sorted participants list for consistent comparison
             })
             
             last_message = None
@@ -268,55 +272,83 @@ def get_contacts():
             updated_at = datetime.utcnow()
             
             if conversation:
+                # If the conversation has a last message, fetch it
                 if conversation.get('last_message'):
                     last_message_doc = messages_collection.find_one(
-                        {'_id': conversation['last_message']},
+                        {'_id': ObjectId(conversation['last_message'])},
                         {'content': 1, 'timestamp': 1}
                     )
                     if last_message_doc:
                         last_message = last_message_doc['content']
-                unread_count = conversation.get('unread_count', {}).get(current_user.id, 0)
+                # If no last message, use a placeholder
+                else:
+                    last_message = "No messages yet"
+                
+                # Get the unread count for the current user
+                unread_count = conversation.get('unread_count', {}).get(str(current_user.id), 0)
                 updated_at = conversation.get('updated_at', updated_at)
             
+            # Append the contact information to the contacts list, converting ObjectId to string
             contacts.append({
-                'user_id': contact['contact_id'],
+                'user_id': str(contact['contact_id']),  # Convert ObjectId to string
                 'name': f"{contact_user.get('first_name', '')} {contact_user.get('last_name', '')}".strip(),
                 'profile_picture': contact_user.get('profile_picture'),
                 'last_message': last_message,
                 'unread_count': unread_count,
-                'updated_at': updated_at,
+                'updated_at': updated_at.isoformat(),  # Convert datetime to string
                 'status': 'online' if contact_user.get('last_seen') == 'online' else 'offline',
                 'is_pinned': contact.get('is_pinned', False)
             })
     
+    # Return the list of contacts as JSON
     return jsonify({'contacts': contacts})
 
-@app.route('/pin_contact', methods=['POST'])
+#  toggles the pinning of the contact
+@app.route('/toggle_pin_contact', methods=['POST'])
 @login_required
-def pin_contact():
-    data = request.get_json()  # Get the contact data
-    contact_id = data.get('contact_id')  # The ID of the contact to be pinned
-    is_pinned = data.get('is_pinned')  # The new pin status
-
+def toggle_pin_contact():
+    data = request.get_json()
+    contact_id = data.get('contact_id')
+    
     if not contact_id:
-        return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
+        return jsonify({'success': False, 'message': 'Contact ID required'}), 400
 
-    # Find the user's contact list
-    current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
+    try:
+        # Find the contact in the user's contacts array
+        user = users_collection.find_one(
+            {'_id': ObjectId(current_user.id)},
+            {'contacts': 1}
+        )
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
 
-    if 'contacts' not in current_user_doc:
-        return jsonify({'success': False, 'message': 'No contacts found.'}), 404
+        # Find the specific contact
+        contact = next((c for c in user.get('contacts', []) if str(c['contact_id']) == contact_id), None)
+        if not contact:
+            return jsonify({'success': False, 'message': 'Contact not found'}), 404
 
-    # Update the pin status of the contact in the user's contact list
-    updated = users_collection.update_one(
-        {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
-        {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
-    )
+        # Toggle the is_pinned status
+        new_pinned_status = not contact.get('is_pinned', False)
+        
+        # Update in database
+        result = users_collection.update_one(
+            {'_id': ObjectId(current_user.id), 'contacts.contact_id': contact_id},
+            {'$set': {'contacts.$.is_pinned': new_pinned_status}}
+        )
+        
+        if result.modified_count == 0:
+            return jsonify({'success': False, 'message': 'Failed to update pin status'}), 400
 
-    if updated.matched_count > 0:
-        return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
-    else:
-        return jsonify({'success': False, 'message': 'Contact not found.'}), 404
+        return jsonify({
+            'success': True,
+            'is_pinned': new_pinned_status,
+            'message': 'Contact pinned' if new_pinned_status else 'Contact unpinned'
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error toggling pin: {str(e)}")
+        return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
 @app.route('/send_message', methods=['POST'])
 @login_required
@@ -999,6 +1031,90 @@ def business_dashboard():
     business = businesses_collection.find_one({'owner_id': current_user.id})
     
     return render_template('business_dashboard.html', user=user, business=business)
+
+
+# route to messagereq
+@app.route('/messagereq')
+@login_required
+def messagereq():
+    # Get current user's contact IDs
+    current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
+    contact_ids = {str(contact['contact_id']) for contact in current_user_doc.get('contacts', [])}
+
+    # Get all distinct users who have sent messages to the current user
+    message_senders = messages_collection.distinct('sender', {'recipient': current_user.id})
+
+    pending_users = []
+    for sender_id in message_senders:
+        sender_id_str = str(sender_id)
+        if sender_id_str not in contact_ids and sender_id_str != current_user.id:
+            sender = users_collection.find_one({'_id': ObjectId(sender_id)})
+            if sender:
+                # Find the latest message from this sender
+                last_message_doc = messages_collection.find_one(
+                    {'sender': sender_id, 'recipient': current_user.id},
+                    sort=[('timestamp', -1)]
+                )
+                pending_users.append({
+                    'sender_id': sender_id_str,
+                    'name': f"{sender.get('first_name', '')} {sender.get('last_name', '')}".strip(),
+                    'last_message': last_message_doc.get('content', '') if last_message_doc else '',
+                    'profile_picture': sender.get('profile_picture', '/static/default-profile.png')
+                })
+
+    # Get contacts list for sidebar
+    contacts = []
+    for contact in current_user_doc.get('contacts', []):
+        contact_user = users_collection.find_one({'_id': ObjectId(contact['contact_id'])})
+        if contact_user:
+            contacts.append({
+                'name': f"{contact_user.get('first_name', '')} {contact_user.get('last_name', '')}".strip(),
+                'profile_picture': contact_user.get('profile_picture', '/static/default-profile.png')
+            })
+
+    return render_template('messagereq.html', pending_users=pending_users, contacts=contacts)
+@app.route('/accept_request', methods=['POST'])
+@login_required
+def accept_request():
+    try:
+        data = request.get_json()
+        sender_id = data.get('sender_id')
+
+        if not sender_id:
+            return jsonify({'success': False, 'message': 'Missing sender ID.'}), 400
+
+        receiver_id = ObjectId(current_user.id)
+        sender_id_obj = ObjectId(sender_id)
+
+        sender_doc = users_collection.find_one({'_id': sender_id_obj})
+        if not sender_doc:
+            return jsonify({'success': False, 'message': 'Sender not found.'}), 404
+
+        # Add sender to current user's (receiver's) contacts
+        contact_data = {
+            'contact_id': sender_id_obj,
+            'name': f"{sender_doc.get('first_name', '')} {sender_doc.get('last_name', '')}".strip(),
+            'profile_picture': sender_doc.get('profile_picture', '/static/default-profile.png'),
+            'username': sender_doc.get('username', ''),
+            'added_at': datetime.utcnow(),
+            'is_pinned': False
+        }
+
+        users_collection.update_one(
+            {'_id': receiver_id},
+            {'$addToSet': {'contacts': contact_data}}
+        )
+
+        # Optionally delete the request message if you’re storing that separately
+        db.message_requests.delete_one({
+            'sender_id': sender_id,
+            'receiver_id': str(current_user.id)
+        })
+
+        return jsonify({'success': True, 'message': 'Request accepted.'})
+    except Exception as e:
+        print("Error in accept_request:", e)
+        return jsonify({'success': False, 'message': 'Internal server error.'}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
