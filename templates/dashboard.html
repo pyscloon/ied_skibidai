@@ -113,8 +113,7 @@
 
         <!-- User Posts Section -->
         <section class="p-4 max-w-4xl mx-auto space-y-6 mt-4"> <!-- Reduced space above posts -->
-            <!-- "Posts" heading -->
-            <h2 class="text-2xl font-semibold text-white">Posts</h2> <!-- Added the Posts title -->
+            <h2 class="text-2xl font-semibold text-white">Posts</h2> 
 
             {% if posts %}
                 {% for post in posts %}
@@ -132,8 +131,10 @@
                         <div>
                             <p class="font-semibold">{{ user.first_name }} {{ user.last_name }}</p>
                             <p class="text-xs text-gray-500">
-                                {% if post.created_at %}
-                                    {{ post.created_at.strftime('%b %d, %Y %I:%M %p') }}
+                                {% if post.created_at_local %}
+                                    {{ post.created_at_local.strftime('%b %d, %Y %I:%M %p') }}
+                                {% elif post.created_at_utc %}
+                                    {{ post.created_at_utc.strftime('%b %d, %Y %I:%M %p') }}
                                 {% else %}
                                     {{ now.strftime('%b %d, %Y %I:%M %p') }}
                                 {% endif %}

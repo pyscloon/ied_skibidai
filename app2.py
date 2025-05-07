@@ -46,22 +46,27 @@ login_manager.login_view = "login"
 
 # Helper for file upload
 UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'avi'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'avi', 'pdf', 'docs'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 class MongoUser(UserMixin):
-    def __init__(self, id, username):
-        self.id = id
-        self.username = username
+    def __init__(self, user_data):
+        self.id = str(user_data['_id'])
+        self.username = user_data.get('username')
+        self.email = user_data.get('email')
+        self.first_name = user_data.get('first_name', '')
+        self.last_name = user_data.get('last_name', '')
+        self.business_name = user_data.get('business_name', '')
+
 
 @login_manager.user_loader
 def load_user(user_id):
     user = users_collection.find_one({'_id': ObjectId(user_id)})
     if user:
-        return MongoUser(id=str(user['_id']), username=user['username'])
+        return MongoUser(user)
     return None
 
 # Register form and Login form
@@ -262,55 +267,92 @@ def get_available_users():
 
     return jsonify({'users': user_list}), 200
 
-@app.route('/get_contacts')
+# Removed duplicate get_contacts route definition
+    
+# route to messagereq
+@app.route('/messagereq')
 @login_required
-def get_contacts():
-    user = users_collection.find_one({'_id': ObjectId(current_user.id)})
-    if not user or 'contacts' not in user:
-        return jsonify({'contacts': []})
-    
-    # Get contact details and last messages
-    contacts = []
-    for contact in user['contacts']:
-        contact_user = users_collection.find_one(
-            {'_id': ObjectId(contact['contact_id'])},
-            {'username': 1, 'first_name': 1, 'last_name': 1, 'profile_picture': 1, 'last_seen': 1}
-        )
-        
-        if contact_user:
-            # Get conversation data
-            conversation = conversations_collection.find_one({
-                'participants': sorted([current_user.id, contact['contact_id']])
-            })
-            
-            last_message = None
-            unread_count = 0
-            updated_at = datetime.utcnow()
-            
-            if conversation:
-                if conversation.get('last_message'):
-                    last_message_doc = messages_collection.find_one(
-                        {'_id': conversation['last_message']},
-                        {'content': 1, 'timestamp': 1}
-                    )
-                    if last_message_doc:
-                        last_message = last_message_doc['content']
-                unread_count = conversation.get('unread_count', {}).get(current_user.id, 0)
-                updated_at = conversation.get('updated_at', updated_at)
-            
-            contacts.append({
-                'user_id': contact['contact_id'],
-                'name': f"{contact_user.get('first_name', '')} {contact_user.get('last_name', '')}".strip(),
-                'profile_picture': contact_user.get('profile_picture'),
-                'last_message': last_message,
-                'unread_count': unread_count,
-                'updated_at': updated_at,
-                'status': 'online' if contact_user.get('last_seen') == 'online' else 'offline',
-                'is_pinned': contact.get('is_pinned', False)
-            })
-    
-    return jsonify({'contacts': contacts})
+def messagereq():
+    # Get current user's contact IDs
+    current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
+    contact_ids = {str(contact['contact_id']) for contact in current_user_doc.get('contacts', [])}
 
+    # Get all distinct users who have sent messages to the current user
+    message_senders = messages_collection.distinct('sender', {'recipient': current_user.id})
+
+    pending_users = []
+    for sender_id in message_senders:
+        sender_id_str = str(sender_id)
+        if sender_id_str not in contact_ids and sender_id_str != current_user.id:
+            sender = users_collection.find_one({'_id': ObjectId(sender_id)})
+            if sender:
+                # Find the latest message from this sender
+                last_message_doc = messages_collection.find_one(
+                    {'sender': sender_id, 'recipient': current_user.id},
+                    sort=[('timestamp', -1)]
+                )
+                pending_users.append({
+                    'sender_id': sender_id_str,
+                    'name': f"{sender.get('first_name', '')} {sender.get('last_name', '')}".strip(),
+                    'last_message': last_message_doc.get('content', '') if last_message_doc else '',
+                    'profile_picture': sender.get('profile_picture', '/static/default-profile.png')
+                })
+
+    # Get contacts list for sidebar
+    contacts = []
+    for contact in current_user_doc.get('contacts', []):
+        contact_user = users_collection.find_one({'_id': ObjectId(contact['contact_id'])})
+        if contact_user:
+            contacts.append({
+                'name': f"{contact_user.get('first_name', '')} {contact_user.get('last_name', '')}".strip(),
+                'profile_picture': contact_user.get('profile_picture', '/static/default-profile.png')
+            })
+
+    return render_template('messagereq.html', pending_users=pending_users, contacts=contacts)
+
+@app.route('/accept_request', methods=['POST'])
+@login_required
+def accept_request():
+    try:
+        data = request.get_json()
+        sender_id = data.get('sender_id')
+
+        if not sender_id:
+            return jsonify({'success': False, 'message': 'Missing sender ID.'}), 400
+
+        receiver_id = ObjectId(current_user.id)
+        sender_id_obj = ObjectId(sender_id)
+
+        sender_doc = users_collection.find_one({'_id': sender_id_obj})
+        if not sender_doc:
+            return jsonify({'success': False, 'message': 'Sender not found.'}), 404
+
+        # Add sender to current user's (receiver's) contacts
+        contact_data = {
+            'contact_id': sender_id_obj,
+            'name': f"{sender_doc.get('first_name', '')} {sender_doc.get('last_name', '')}".strip(),
+            'profile_picture': sender_doc.get('profile_picture', '/static/default-profile.png'),
+            'username': sender_doc.get('username', ''),
+            'added_at': datetime.utcnow(),
+            'is_pinned': False
+        }
+
+        users_collection.update_one(
+            {'_id': receiver_id},
+            {'$addToSet': {'contacts': contact_data}}
+        )
+
+        # Optionally delete the request message if you’re storing that separately
+        db.message_requests.delete_one({
+            'sender_id': sender_id,
+            'receiver_id': str(current_user.id)
+        })
+
+        return jsonify({'success': True, 'message': 'Request accepted.'})
+    except Exception as e:
+        print("Error in accept_request:", e)
+        return jsonify({'success': False, 'message': 'Internal server error.'}), 500
+    
 @app.route('/pin_contact', methods=['POST'])
 @login_required
 def pin_contact():
@@ -337,7 +379,7 @@ def pin_contact():
         return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
     else:
         return jsonify({'success': False, 'message': 'Contact not found.'}), 404
-
+    
 @app.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
@@ -487,38 +529,6 @@ def handle_join_conversation(data):
                 'user_id': current_user.id
             }, room=room_name)
 
-@app.route('/get_conversation/<contact_id>')
-@login_required
-def get_conversation(contact_id):
-    try:
-        # Validate contact exists
-        if not users_collection.find_one({'_id': ObjectId(contact_id)}):
-            return jsonify({'error': 'Contact not found'}), 404
-
-        # Get conversation messages with proper sender/recipient info
-        messages = messages_collection.find({
-            '$or': [
-                {'sender': current_user.id, 'recipient': contact_id},
-                {'sender': contact_id, 'recipient': current_user.id}
-            ]
-        }).sort('timestamp', 1)
-
-        messages_list = []
-        for msg in messages:
-            messages_list.append({
-                'id': str(msg['_id']),
-                'sender': str(msg['sender']),  # Ensure string type
-                'recipient': str(msg['recipient']),  # Ensure string type
-                'content': msg['content'],
-                'timestamp': msg['timestamp'].isoformat(),
-                'status': msg.get('status', 'sent'),
-                'is_current_user': str(msg['sender']) == current_user.id  # Add explicit flag
-            })
-
-        return jsonify({'messages': messages_list, 'current_user_id': current_user.id})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @socketio.on('typing')
 def handle_typing(data):
@@ -608,33 +618,43 @@ def default_error_handler(e):
     emit('error', {'message': 'An error occurred'})
 
 # Profile Creation Route
-@app.route('/create_profile', methods=['GET', 'POST'])
+@app.route('/create-profile', methods=['GET', 'POST'])
 @login_required
 def create_profile():
     form = CreateProfileForm()
-
     if form.validate_on_submit():
-        first_name = form.first_name.data
-        last_name = form.last_name.data
-        gender = form.gender.data
-        country = form.country.data
-        business = form.business.data
-        time_zone = form.time_zone.data
-
         users_collection.update_one(
             {'_id': ObjectId(current_user.id)},
             {'$set': {
-                'first_name': first_name,
-                'last_name': last_name,
-                'gender': gender,
-                'country': country,
-                'business': business,
-                'time_zone': time_zone,
+                'first_name': form.first_name.data,
+                'last_name': form.last_name.data,
+                'gender': form.gender.data,
+                'country': form.country.data,
+                'business': form.business.data,
+                'time_zone': form.time_zone.data
             }}
         )
-        return redirect(url_for('upload_profile_picture'))
-
+        flash('Profile created successfully!', 'success')
+        return redirect(url_for('dashboard'))
     return render_template('create_profile.html', form=form)
+
+@app.route('/business-setup', methods=['GET', 'POST'])
+@login_required
+def business_setup():
+    form = BusinessSetupForm()
+    if form.validate_on_submit():
+        users_collection.update_one(
+            {'_id': ObjectId(current_user.id)},
+            {'$set': {
+                'business_name': form.business_name.data,
+                'business_type': form.business_type.data,
+                'business_country': form.country.data,
+                'business_location': form.location.data
+            }}
+        )
+        flash('Business information saved!', 'success')
+        return redirect(url_for('business_profile'))
+    return render_template('business_setup.html', form=form)
 
 @app.route('/upload_profile_picture', methods=['GET', 'POST'])
 @login_required
@@ -737,47 +757,57 @@ def upload_business_profile():
 @app.route('/create-post', methods=['POST'])
 @login_required
 def create_post():
-    content = request.form.get('content')
-    files = request.files.getlist('image')
-    is_business_post = request.form.get('is_business_post', 'false') == 'true'
+    try:
+        content = request.form.get('content')
+        files = request.files.getlist('image')
+        is_business_post = request.form.get('is_business_post', 'false') == 'true'
 
-    media_urls = []
-    for file in files:
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_id = fs.put(file, filename=filename, content_type=file.content_type)
-            media_urls.append(f"/file/{file_id}")
+        media_urls = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_id = fs.put(file, filename=filename, content_type=file.content_type)
+                media_urls.append(f"/file/{file_id}")
 
-    # Get Philippines timezone
-    ph_tz = pytz.timezone('Asia/Manila')
-    utc_now = datetime.now(timezone.utc)  
-    ph_time = utc_now.astimezone(ph_tz)
+        business_id = None
+        if is_business_post:
+            business = businesses_collection.find_one({'owner_id': ObjectId(current_user.id)})
 
-    # Determine display name based on post type
-    if is_business_post and hasattr(current_user, 'business_name'):
-        display_name = current_user.business_name
-    else:
-        display_name = f"{current_user.first_name} {current_user.last_name}"
+        # Get Philippines timezone
+        ph_tz = pytz.timezone('Asia/Manila')
+        utc_now = datetime.now(timezone.utc)  
+        ph_time = utc_now.astimezone(ph_tz)
 
-    post = {
-        'content': content,
-        'media': media_urls,
-        'user_id': current_user.id,
-        'username': current_user.username,
-        'display_name': display_name,  # Add this field
-        'is_business_post': is_business_post,
-        'created_at_utc': utc_now,
-        'created_at_local': ph_time,
-        'timezone': 'Asia/Manila',
-        'created_at_str': ph_time.strftime('%b %d, %Y %I:%M %p')  
-    }
-    
-    posts_collection.insert_one(post)
+        # Safely get display name
+        display_name = current_user.username  # Default to username
+        if is_business_post and business:
+            display_name = business.get('business_name', display_name)
+        elif hasattr(current_user, 'first_name') and hasattr(current_user, 'last_name'):
+            display_name = f"{current_user.first_name} {current_user.last_name}".strip()
 
-    return jsonify({
-        'message': 'Post created successfully!',
-        'timestamp': ph_time.strftime('%b %d, %Y %I:%M %p')
-    }), 201
+        post = {
+            'content': content,
+            'media': media_urls,
+            'user_id': current_user.id,
+            'username': current_user.username,
+            'business_id': business_id,
+            'display_name': display_name,
+            'is_business_post': is_business_post,
+            'created_at_utc': utc_now,
+            'created_at_local': ph_time,
+            'timezone': 'Asia/Manila',
+            'created_at_str': ph_time.strftime('%b %d, %Y %I:%M %p')  
+        }
+        
+        posts_collection.insert_one(post)
+
+        return jsonify({
+            'message': 'Post created successfully!',
+            'timestamp': ph_time.strftime('%b %d, %Y %I:%M %p')
+        }), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Get posts route
 @app.route('/posts', methods=['GET'])
@@ -791,6 +821,8 @@ def get_posts():
             'content': post.get('content'),
             'media': post.get('media', []),
             'username': post.get('username'),
+            'display_name': post.get('display_name'),  # Include this
+            'is_business_post': post.get('is_business_post', False),
             'created_at': post.get('created_at_local', post.get('created_at_utc')),
             'created_at_utc': post.get('created_at_utc'),
             'timezone': post.get('timezone', 'Asia/Manila')
@@ -895,8 +927,6 @@ def view_profile(user_id):
                            businesses=businesses,
                            now=datetime.now(pytz.timezone('Asia/Manila')))
 
-
-
 # Dashboard route
 @app.route('/dashboard')
 @login_required
@@ -963,7 +993,7 @@ def login():
         user = users_collection.find_one({'username': form.username.data})
 
         if user and bcrypt.check_password_hash(user['password'], form.password.data):
-            user_obj = MongoUser(id=str(user['_id']), username=user['username'])
+            user_obj = MongoUser(user)
             login_user(user_obj)
 
             if 'first_name' in user and 'last_name' in user:
@@ -1030,7 +1060,297 @@ def business_dashboard():
     user = users_collection.find_one({'_id': ObjectId(current_user.id)})
     business = businesses_collection.find_one({'owner_id': current_user.id})
     
-    return render_template('business_dashboard.html', user=user, business=business)
+    if not business:
+        return redirect(url_for('dashboard'))
+    
+    # Get posts for this business
+    posts = list(posts_collection.find({
+        '$or': [
+            {'business_id': str(business['_id'])},  # Posts directly associated with business
+            {'user_id': current_user.id, 'is_business_post': True}  # Business posts by owner
+        ]
+    }).sort('created_at_utc', -1))
+    
+    return render_template('business_dashboard.html', 
+                         user=user, 
+                         business=business,
+                         posts=posts)
+
+@app.route('/business/<business_id>', methods=['GET'])
+@login_required
+def view_business_dashboard(business_id):
+    try:
+        business = businesses_collection.find_one({'_id': ObjectId(business_id)})
+        if not business:
+            flash("Business not found", "error")
+            return redirect(url_for('dashboard'))
+        
+        # Get owner info (not current user)
+        owner = users_collection.find_one({'_id': ObjectId(business['owner_id'])})
+        
+        # Get posts for this business (both direct business posts and owner's business posts)
+        posts = list(posts_collection.find({
+            '$or': [
+                {'business_id': business_id},
+                {'user_id': business['owner_id'], 'is_business_post': True}
+            ]
+        }).sort('created_at_utc', -1))
+        
+        return render_template(
+            'business_dashboard.html',
+            business=business,
+            user=owner,  # Pass owner info as user
+            posts=posts
+        )
+    except Exception as e:
+        flash("Error loading business", "error")
+        return redirect(url_for('dashboard'))
+
+# Change this route
+@app.route('/profile_business/<business_id>', methods=['GET'])
+@login_required
+def profile_business(business_id):
+    try:
+        # Get the business being viewed
+        business = businesses_collection.find_one({'_id': ObjectId(business_id)})
+        if not business:
+            flash("Business not found", "error")
+            return redirect(url_for('dashboard'))
+        
+        # Get the owner's user info
+        owner = users_collection.find_one({'_id': ObjectId(business['owner_id'])})
+        
+        # Get posts for this business
+        posts = list(posts_collection.find({
+            '$or': [
+                {'business_id': business_id},
+                {'user_id': str(business['owner_id']), 'is_business_post': True}
+            ]
+        }).sort('created_at_utc', -1))
+        
+        # Check if current user is the owner (for UI differences)
+        is_owner = str(business['owner_id']) == current_user.id
+        
+        return render_template(
+            'profile_business.html',
+            business=business,
+            user=owner,  # Show business owner's info, not current user
+            posts=posts,
+            is_owner=is_owner  # Pass this to template for conditional rendering
+        )
+    except Exception as e:
+        flash("Error loading business profile", "error")
+        return redirect(url_for('dashboard'))
+
+
+@app.route('/get_contacts', methods=['GET'])
+@login_required
+def get_contacts():
+    try:
+        print(f"\n[DEBUG] Starting get_contacts for user: {current_user.id}")
+
+        user = users_collection.find_one({'_id': ObjectId(current_user.id)})
+        if not user or 'contacts' not in user:
+            print("[DEBUG] No user or contacts found")
+            return jsonify({'contacts': []})
+
+        # Filter out deleted contacts
+        contacts = [contact for contact in user['contacts'] if not contact.get('is_deleted', False)]
+
+        contact_ids = [ObjectId(contact['contact_id']) for contact in contacts]
+        contact_users = list(users_collection.find(
+            {'_id': {'$in': contact_ids}},
+            {'username': 1, 'first_name': 1, 'last_name': 1, 'profile_picture': 1, 'last_seen': 1}
+        ))
+
+        user_map = {str(u['_id']): u for u in contact_users}
+        print(f"[DEBUG] Found {len(contact_users)} contact users")
+
+        contacts_result = []
+
+        for contact in contacts:
+            contact_id = str(contact['contact_id'])
+            contact_user = user_map.get(contact_id)
+            if not contact_user:
+                continue
+
+            # Always get the latest message between current_user and contact_id
+            last_msg = messages_collection.find_one({
+                '$or': [
+                    {'sender': current_user.id, 'recipient': contact_id},
+                    {'sender': contact_id, 'recipient': current_user.id}
+                ]
+            }, sort=[('timestamp', -1)])
+
+            last_message = last_msg['content'] if last_msg else 'No messages yet'
+            updated_at = last_msg['timestamp'] if last_msg else datetime.utcnow()
+
+            # Get unread count by counting messages from contact_id to current_user not marked as read
+            unread_count = messages_collection.count_documents({
+                'sender': contact_id,
+                'recipient': current_user.id,
+                'read': False
+            })
+
+            contacts_result.append({
+                'user_id': contact_id,
+                'name': f"{contact_user.get('first_name', '')} {contact_user.get('last_name', '')}".strip(),
+                'profile_picture': contact_user.get('profile_picture'),
+                'last_message': last_message,
+                'unread_count': unread_count,
+                'updated_at': updated_at.isoformat() if isinstance(updated_at, datetime) else updated_at,
+                'status': 'online' if contact_user.get('last_seen') == 'online' else 'offline',
+                'is_pinned': contact.get('is_pinned', False)
+            })
+
+        # Sort by pinned first, then recent updates
+        contacts_result.sort(key=lambda x: (not x['is_pinned'], x['updated_at']), reverse=True)
+
+        print(f"[DEBUG] Returning {len(contacts_result)} contacts")
+        return jsonify({'contacts': contacts_result})
+
+    except Exception as e:
+        print(f"[ERROR] get_contacts failed: {e}")
+        return jsonify({'error': 'Failed to fetch contacts'}), 500
+
+@app.route('/get_conversation/<contact_id>')
+@login_required
+def get_conversation(contact_id):
+    try:
+        # Validate contact exists
+        if not users_collection.find_one({'_id': ObjectId(contact_id)}):
+            return jsonify({'error': 'Contact not found'}), 404
+
+        # Get conversation messages with proper sender/recipient info
+        messages = messages_collection.find({
+            '$or': [
+                {'sender': current_user.id, 'recipient': contact_id},
+                {'sender': contact_id, 'recipient': current_user.id}
+            ]
+        }).sort('timestamp', 1)
+
+        messages_list = []
+        for msg in messages:
+            messages_list.append({
+                'id': str(msg['_id']),
+                'sender': str(msg['sender']),  # Ensure string type
+                'recipient': str(msg['recipient']),  # Ensure string type
+                'content': msg['content'],
+                'timestamp': msg['timestamp'].isoformat(),
+                'status': msg.get('status', 'sent'),
+                'is_current_user': str(msg['sender']) == current_user.id  # Add explicit flag
+            })
+
+        return jsonify({'messages': messages_list, 'current_user_id': current_user.id})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# @app.route('/pin_contact', methods=['POST'])
+# @login_required
+# def pin_contact():
+#     data = request.get_json()  # Get the contact data
+#     contact_id = data.get('contact_id')  # The ID of the contact to be pinned
+#     is_pinned = data.get('is_pinned')  # The new pin status
+
+#     if not contact_id:
+#         return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
+
+#     # Find the user's contact list
+#     current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
+
+#     if 'contacts' not in current_user_doc:
+#         return jsonify({'success': False, 'message': 'No contacts found.'}), 404
+
+#     # Update the pin status of the contact in the user's contact list
+#     updated = users_collection.update_one(
+#         {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
+#         {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
+#     )
+
+#     if updated.matched_count > 0:
+#         return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
+#     else:
+#         return jsonify({'success': False, 'message': 'Contact not found.'}), 404
+ 
+@app.route('/trashbin')
+@login_required
+def trashbin():
+    pipeline = [
+        {"$match": {"_id": ObjectId(current_user.id)}},
+        {"$unwind": {"path": "$contacts", "preserveNullAndEmptyArrays": True}},
+        {"$match": {"contacts.is_deleted": True}},
+        {
+            "$set": {
+                "contact_obj_id": {
+                    "$convert": {
+                        "input": "$contacts.contact_id",
+                        "to": "objectId",
+                        "onError": None,
+                        "onNull": None
+                    }
+                }
+            }
+        },
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "contact_obj_id",
+                "foreignField": "_id",
+                "as": "deleted_user"
+            }
+        },
+        {"$unwind": {"path": "$deleted_user", "preserveNullAndEmptyArrays": True}},
+        {
+            "$project": {
+                "contact_id": "$contacts.contact_id",
+                "name": "$deleted_user.name",
+                "profile_picture": "$deleted_user.profile_picture",
+                "sender_id": "$contacts.contact_id"
+            }
+        }
+    ]
+
+    deleted_contacts = list(users_collection.aggregate(pipeline))
+    return render_template("trashbin.html", deleted_contacts=deleted_contacts)
+
+
+@app.route('/delete_contact', methods=['POST'])
+@login_required
+def delete_contact():
+    data = request.json
+    contact_id = data.get("contact_id")
+    print(f"[DEBUG] Attempting to delete contact with ID: {contact_id}")  # Debugging line
+
+    # Fetch the user from the database
+    user = users_collection.find_one({"_id": ObjectId(current_user.id)})
+    if not user:
+        return jsonify({"success": False, "message": "User not found"}), 404
+
+    # Find the contact in the user's contacts list and mark it as deleted
+    contact_index = next((index for index, contact in enumerate(user.get('contacts', [])) 
+                         if str(contact.get('contact_id')) == contact_id), None)
+
+    if contact_index is None:
+        return jsonify({"success": False, "message": "Contact not found"}), 404
+
+    # Update the contact to mark it as deleted (soft delete)
+    result = users_collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {
+            "$set": {
+                f"contacts.{contact_index}.is_deleted": True  # Mark the contact as deleted
+            }
+        }
+    )
+
+    print(f"[DEBUG] MongoDB update result: {result.modified_count}")  # Debugging line
+
+    if result.modified_count > 0:
+        return jsonify({"success": True})
+    
+    return jsonify({"success": False, "message": "Failed to delete contact"}), 500
+
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

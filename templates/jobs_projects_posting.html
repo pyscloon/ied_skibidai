@@ -76,75 +76,70 @@
     <!-- Sidebar -->
 <!-- Sidebar -->
 <aside id="sidebar" class="lg:block w-full lg:w-64 bg-[#11212d] p-6 space-y-6 min-h-screen transition-all duration-300 sticky top-24 rounded-lg shadow-lg">
-
   <!-- Categories Section -->
   <div>
     <h2 class="text-lg font-semibold mb-4 text-gray-300">Job Categories</h2>
-    <input type="checkbox" id="toggle-categories" class="hidden peer">
-    <div class="flex flex-col divide-y divide-gray-700 category-transition max-h-40 overflow-hidden peer-checked:max-h-full">
 
-      <!-- Each item now includes a checkbox -->
+    <!-- Only one checkbox with class peer -->
+    <input type="checkbox" id="toggle-categories" class="hidden peer" />
+
+    <!-- Category list with overflow controlled by peer-checked -->
+    <div class="flex flex-col divide-y divide-gray-700 category-transition max-h-[220px] overflow-hidden peer-checked:max-h-[999px] transition-all duration-500 ease-in-out">
+
+      <!-- Visible by default -->
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Technology</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Remote</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Marketing</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Design</span>
       </label>
 
+      <!-- Hidden initially due to max-height, shown when checkbox is checked -->
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Finance</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Education</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Healthcare</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Engineering</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Sales</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>HR</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Legal</span>
       </label>
-
       <label class="py-2 flex items-center space-x-2 text-white font-medium cursor-pointer">
         <input type="checkbox" class="form-checkbox text-[#d9561d] rounded focus:ring-0" />
         <span>Support</span>
       </label>
-
     </div>
+
+    <!-- Toggle label -->
     <div class="flex justify-center mt-4">
       <label for="toggle-categories" class="text-[#d9561d] font-semibold cursor-pointer">
         <span class="peer-checked:hidden">Show More</span>
@@ -154,7 +149,6 @@
   </div>
 </aside>
 
-
 <!-- Main Content -->
 <main class="flex-1 p-4 sm:p-6 space-y-6">
 
@@ -162,7 +156,7 @@
 
     <!-- Job Card 1 -->
     <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
-      <img src="./images/job1.jpg" alt="Software Engineer Project" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <img src="./static/job1.png" alt="Software Engineer Project" class="rounded-lg mb-4 w-full h-40 object-cover">
       <h2 class="text-xl font-bold mb-2 text-white">Software Engineer</h2>
       <p class="text-[#d9561d] mb-2">GoTechno Inc. - Remote</p>
       <p class="text-gray-300 mb-4">Help build and scale modern web apps using cutting-edge technologies.</p>
@@ -174,7 +168,7 @@
   
     <!-- Job Card 2 -->
     <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
-      <img src="./images/job2.jpg" alt="UI/UX Design" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <img src="./static/job2.png" alt="UI/UX Design" class="rounded-lg mb-4 w-full h-40 object-cover">
       <h2 class="text-xl font-bold mb-2 text-white">UI/UX Designer</h2>
       <p class="text-[#d9561d] mb-2">CreativeX - New York, NY</p>
       <p class="text-gray-300 mb-4">Design sleek, user-friendly interfaces for our mobile and web products.</p>
@@ -187,7 +181,7 @@
   
     <!-- Job Card 3 -->
     <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
-      <img src="./images/job3.jpg" alt="Marketing Strategy" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <img src="./static/job3.png" alt="Marketing Strategy" class="rounded-lg mb-4 w-full h-40 object-cover">
       <h2 class="text-xl font-bold mb-2 text-white">Marketing Strategist</h2>
       <p class="text-[#d9561d] mb-2">Growthly - San Francisco, CA</p>
       <p class="text-gray-300 mb-4">Plan and execute creative marketing campaigns to boost brand awareness.</p>
@@ -199,7 +193,7 @@
   
     <!-- Job Card 4 -->
     <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
-      <img src="./images/job4.jpg" alt="Finance Analyst" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <img src="./static/job4.png" alt="Finance Analyst" class="rounded-lg mb-4 w-full h-40 object-cover">
       <h2 class="text-xl font-bold mb-2 text-white">Finance Analyst</h2>
       <p class="text-[#d9561d] mb-2">FinLogic - Remote</p>
       <p class="text-gray-300 mb-4">Analyze trends and provide financial insights to support business decisions.</p>
@@ -212,7 +206,7 @@
   
     <!-- Job Card 5 -->
     <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
-      <img src="./images/job5.jpg" alt="Data Analysis" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <img src="./static/job5.png" alt="Data Analysis" class="rounded-lg mb-4 w-full h-40 object-cover">
       <h2 class="text-xl font-bold mb-2 text-white">Data Analyst</h2>
       <p class="text-[#d9561d] mb-2">DataWiz - Chicago, IL</p>
       <p class="text-gray-300 mb-4">Interpret complex data to help drive business decisions and strategy.</p>
@@ -224,7 +218,7 @@
   
     <!-- Job Card 6 -->
     <div class="bg-[#13232f] rounded-xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105">
-      <img src="./images/job6.jpg" alt="DevOps Tools" class="rounded-lg mb-4 w-full h-40 object-cover">
+      <img src="./static/job6.png" alt="DevOps Tools" class="rounded-lg mb-4 w-full h-40 object-cover">
       <h2 class="text-xl font-bold mb-2 text-white">DevOps Engineer</h2>
       <p class="text-[#d9561d] mb-2">CloudFlow - Seattle, WA</p>
       <p class="text-gray-300 mb-4">Automate deployments and manage cloud infrastructure efficiently.</p>

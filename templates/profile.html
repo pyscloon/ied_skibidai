@@ -31,6 +31,7 @@
         </div>
         
         <nav class="space-x-6 text-sm">
+            <a href="{{ url_for('jobs_projects_posting') }}" class="hover:underline">Newsfeed</a>
             <a href="#" class="hover:underline">About</a>
             <a href="#" class="hover:underline">Contact</a>
             <a href="{{ url_for('login') }}" class="hover:underline">Login</a>
@@ -70,7 +71,7 @@
         {% if businesses %}
         <div class="relative h-96 max-w-3xl mx-auto overflow-x-auto">
             {% for biz in businesses[:4] %}
-            <a href="{{ url_for('business_dashboard', business_id=biz.id) }}" 
+            <a href="{{ url_for('profile_business', business_id=biz._id) }}" 
                 class="absolute left-0 top-0 w-full max-w-sm group
                         translate-y-[{{ loop.index0 * 40 }}px]
                         z-[{{ 10 - loop.index0 }}]
@@ -132,8 +133,10 @@
                         <div>
                             <p class="font-semibold">{{ user.first_name }} {{ user.last_name }}</p>
                             <p class="text-xs text-gray-500">
-                                {% if post.created_at %}
-                                    {{ post.created_at.strftime('%b %d, %Y %I:%M %p') }}
+                                {% if post.created_at_local %}
+                                    {{ post.created_at_local.strftime('%b %d, %Y %I:%M %p') }}
+                                {% elif post.created_at_utc %}
+                                    {{ post.created_at_utc.strftime('%b %d, %Y %I:%M %p') }}
                                 {% else %}
                                     {{ now.strftime('%b %d, %Y %I:%M %p') }}
                                 {% endif %}
