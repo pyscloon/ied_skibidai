@@ -8,7 +8,7 @@ from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField, FileField
-from wtforms.validators import InputRequired, Length, ValidationError, DataRequired, Email
+from wtforms.validators import InputRequired, Length, ValidationError, DataRequired, Email  
 from pymongo import MongoClient, errors
 from bson import ObjectId
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -142,7 +142,7 @@ jobs_collection = db['jobs']
 # Then in your route:
 @app.route('/jobs-projects-posting')  # URL path can be whatever you want
 def jobs_projects_posting():  # This is the endpoint name for url_for()
-    try:
+    # try:
         # Get jobs from MongoDB and convert to list
         jobs = list(jobs_collection.find({}, {'_id': 0}))  # Exclude MongoDB _id field
         
@@ -151,9 +151,9 @@ def jobs_projects_posting():  # This is the endpoint name for url_for()
         
         # Render the template with the correct filename
         return render_template('jobs_projects_posting.html', jobs=jobs)
-    except Exception as e:
-        print(f"Error loading jobs: {str(e)}")
-        return render_template('error.html', message="Could not load jobs"), 500
+    # except Exception as e:
+    #     print(f"Error loading jobs: {str(e)}")
+    #     return render_template('error.html', message="Could not load jobs"), 500
     
 # start of messaging website also imput new import for socketio
 @app.route('/messaging')
@@ -1014,9 +1014,9 @@ def logout():
     return redirect(url_for('login'))
 
 # Home route
-@app.route('/')
-def home():
-    return render_template("home.html")
+@app.route("/")
+def index():
+    return render_template("index.html", now=datetime.now())
 
 # edit profile
 @app.route('/edit_profile', methods=['GET', 'POST'])

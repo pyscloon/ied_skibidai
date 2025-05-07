@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WebWork{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#e65c2e',
+                            50: '#fef3f0',
+                            100: '#fde6de',
+                            200: '#fac7b3',
+                            300: '#f6a182',
+                            400: '#f07a51',
+                            500: '#e65c2e',
+                            600: '#d14421',
+                            700: '#ad331c',
+                            800: '#8c2a1c',
+                            900: '#73251b',
+                            950: '#3e110c',
+                        },
+                        dark: {
+                            DEFAULT: '#0a1120',
+                            50: '#f5f7fa',
+                            100: '#ebeef3',
+                            200: '#d2dae5',
+                            300: '#a9bbce',
+                            400: '#7896b2',
+                            500: '#557795',
+                            600: '#415e7c',
+                            700: '#354b65',
+                            800: '#2e4055',
+                            900: '#293748',
+                            950: '#0a1120',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark-950 text-white min-h-screen flex flex-col">
+    <header class="bg-dark-900 py-4">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <a href="{{ url_for('index') }}" class="text-primary-500 text-2xl font-bold">WebWork</a>
+            <nav class="hidden md:flex space-x-6">
+                <a href="{{ url_for('index') }}#features" class="text-white hover:text-primary-400">Features</a>
+                {% if 'user_id' in session %}
+                <a href="{{ url_for('job_listings') }}" class="text-white hover:text-primary-400">Feed</a>
+                {% endif %}
+                <a href="{{ url_for('index') }}#pricing" class="text-white hover:text-primary-400">Pricing</a>
+                {% if 'user_id' in session %}
+                <a href="{{ url_for('dashboard') }}" class="text-white hover:text-primary-400">Dashboard</a>
+                {% endif %}
+            </nav>
+            <div class="flex items-center space-x-4">
+                {% if 'user_id' in session %}
+                <a href="{{ url_for('logout') }}" class="text-white hover:text-primary-400">Logout</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="text-white hover:text-primary-400">Login</a>
+                <a href="{{ url_for('register') }}" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-full">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="container mx-auto px-4 mt-4">
+            {% for message in messages %}
+            <div class="bg-primary-500 text-white p-4 rounded mb-4">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-dark-900 py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-primary-500 text-xl font-bold mb-4">WebWork</h3>
+                    <p class="text-gray-400">The ultimate networking hub for business professionals.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4">Features</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-primary-400">Professional Profiles</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Job Board</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Messaging</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Business Cards</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4">Company</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-primary-400">About Us</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Careers</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Blog</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4">Legal</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-primary-400">Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-primary-400">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; {{ now.year }} WebWork. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
