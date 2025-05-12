@@ -54,12 +54,16 @@ def allowed_file(filename):
 
 class MongoUser(UserMixin):
     def __init__(self, user_data):
+        self.user_data = user_data
         self.id = str(user_data['_id'])
         self.username = user_data.get('username')
         self.email = user_data.get('email')
         self.first_name = user_data.get('first_name', '')
         self.last_name = user_data.get('last_name', '')
         self.business_name = user_data.get('business_name', '')
+
+    def get_id(self):
+        return str(self.user_data['_id'])
 
 
 @login_manager.user_loader
@@ -353,32 +357,32 @@ def accept_request():
         print("Error in accept_request:", e)
         return jsonify({'success': False, 'message': 'Internal server error.'}), 500
     
-@app.route('/pin_contact', methods=['POST'])
-@login_required
-def pin_contact():
-    data = request.get_json()  # Get the contact data
-    contact_id = data.get('contact_id')  # The ID of the contact to be pinned
-    is_pinned = data.get('is_pinned')  # The new pin status
+# @app.route('/pin_contact', methods=['POST'])
+# @login_required
+# def pin_contact():
+#     data = request.get_json()  # Get the contact data
+#     contact_id = data.get('contact_id')  # The ID of the contact to be pinned
+#     is_pinned = data.get('is_pinned')  # The new pin status
 
-    if not contact_id:
-        return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
+#     if not contact_id:
+#         return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
 
-    # Find the user's contact list
-    current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
+#     # Find the user's contact list
+#     current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
 
-    if 'contacts' not in current_user_doc:
-        return jsonify({'success': False, 'message': 'No contacts found.'}), 404
+#     if 'contacts' not in current_user_doc:
+#         return jsonify({'success': False, 'message': 'No contacts found.'}), 404
 
-    # Update the pin status of the contact in the user's contact list
-    updated = users_collection.update_one(
-        {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
-        {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
-    )
+#     # Update the pin status of the contact in the user's contact list
+#     updated = users_collection.update_one(
+#         {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
+#         {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
+#     )
 
-    if updated.matched_count > 0:
-        return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
-    else:
-        return jsonify({'success': False, 'message': 'Contact not found.'}), 404
+#     if updated.matched_count > 0:
+#         return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
+#     else:
+#         return jsonify({'success': False, 'message': 'Contact not found.'}), 404
     
 @app.route('/send_message', methods=['POST'])
 @login_required
@@ -618,25 +622,28 @@ def default_error_handler(e):
     emit('error', {'message': 'An error occurred'})
 
 # Profile Creation Route
-@app.route('/create-profile', methods=['GET', 'POST'])
-@login_required
+@app.route('/create_profile', methods=['GET', 'POST'])
 def create_profile():
+    if 'user_id' not in session:
+        return redirect(url_for('register'))
+    
     form = CreateProfileForm()
     if form.validate_on_submit():
+        # Update the specific user document using the stored ID
         users_collection.update_one(
-            {'_id': ObjectId(current_user.id)},
+            {'_id': ObjectId(session['user_id'])},
             {'$set': {
                 'first_name': form.first_name.data,
                 'last_name': form.last_name.data,
                 'gender': form.gender.data,
-                'country': form.country.data,
                 'business': form.business.data,
+                'country': form.country.data,
                 'time_zone': form.time_zone.data
             }}
         )
-        flash('Profile created successfully!', 'success')
-        return redirect(url_for('dashboard'))
-    return render_template('create_profile.html', form=form)
+        return redirect(url_for('upload_profile_picture'))
+    
+    return render_template("create_profile.html", form=form)
 
 @app.route('/business-setup', methods=['GET', 'POST'])
 @login_required
@@ -657,40 +664,43 @@ def business_setup():
     return render_template('business_setup.html', form=form)
 
 @app.route('/upload_profile_picture', methods=['GET', 'POST'])
-@login_required
 def upload_profile_picture():
+    if 'user_id' not in session:
+        return redirect(url_for('register'))
+    
     if request.method == 'POST':
-        biography = request.form['biography']
-        profile_picture_file = request.files['profile_picture']
-        cover_photo_file = request.files.get('cover_photo')  # Use .get() because cover_photo is optional
-
-        updates = {'biography': biography}
-
-        # Handle profile picture upload
-        if profile_picture_file and allowed_file(profile_picture_file.filename):
-            profile_filename = secure_filename(profile_picture_file.filename)
-            profile_file_id = fs.put(profile_picture_file, filename=profile_filename, content_type=profile_picture_file.content_type)
-            profile_file_url = f"/file/{profile_file_id}"
-            updates['profile_picture'] = profile_file_url
-        else:
-            return "Invalid profile picture file type.", 400
-
-        # Handle cover photo upload (optional)
-        if cover_photo_file and allowed_file(cover_photo_file.filename):
-            cover_filename = secure_filename(cover_photo_file.filename)
-            cover_file_id = fs.put(cover_photo_file, filename=cover_filename, content_type=cover_photo_file.content_type)
-            cover_file_url = f"/file/{cover_file_id}"
-            updates['cover_photo'] = cover_file_url
-
-        # Update the user's profile
+        user_id = ObjectId(session['user_id'])
+        
+        # Handle profile picture
+        if 'profile_picture' in request.files:
+            profile_pic = request.files['profile_picture']
+            if profile_pic.filename != '':
+                profile_pic_id = fs.put(profile_pic, filename=profile_pic.filename)
+                users_collection.update_one(
+                    {'_id': user_id},
+                    {'$set': {'profile_picture_id': profile_pic_id}}
+                )
+        
+        # Handle cover photo
+        if 'cover_photo' in request.files:
+            cover_photo = request.files['cover_photo']
+            if cover_photo.filename != '':
+                cover_photo_id = fs.put(cover_photo, filename=cover_photo.filename)
+                users_collection.update_one(
+                    {'_id': user_id},
+                    {'$set': {'cover_photo_id': cover_photo_id}}
+                )
+        
+        # Handle biography
+        biography = request.form.get('biography', '')
         users_collection.update_one(
-            {'_id': ObjectId(current_user.id)},
-            {'$set': updates}
+            {'_id': user_id},
+            {'$set': {'biography': biography}}
         )
-
+        
         return redirect(url_for('dashboard'))
-
-    return render_template('upload_profile_picture.html')
+    
+    return render_template("upload_profile_picture.html")
 
 # Route to serve files from GridFS
 @app.route('/file/<file_id>')
@@ -972,13 +982,26 @@ def register():
     if form.validate_on_submit():
         try:
             hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-            users_collection.insert_one({
+            # Insert new user and get the ID
+            result = users_collection.insert_one({
                 'email': form.email.data,
                 'username': form.username.data,
-                'password': hashed_pw
+                'password': hashed_pw,
+                'created_at': datetime.utcnow()
             })
+            
+            # Immediately log in the new user
+            new_user = users_collection.find_one({'_id': result.inserted_id})
+            user_obj = MongoUser(new_user)
+            login_user(user_obj)
+            
+            # Store in session
+            session['user_id'] = str(result.inserted_id)
+            session['username'] = form.username.data
+            
             flash("Account created. Complete your profile.")
             return redirect(url_for('create_profile'))
+            
         except errors.DuplicateKeyError:
             flash("Email or username already exists.")
             return render_template("register.html", form=form)
@@ -988,22 +1011,29 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+    
+    # Clear any existing session when arriving at login page
+    if request.method == 'GET':
+        session.clear()
 
     if form.validate_on_submit():
         user = users_collection.find_one({'username': form.username.data})
-
+        
         if user and bcrypt.check_password_hash(user['password'], form.password.data):
             user_obj = MongoUser(user)
             login_user(user_obj)
-
+            
+            # Set session variables
+            session['user_id'] = str(user['_id'])
+            session['username'] = user['username']
+            
             if 'first_name' in user and 'last_name' in user:
                 return redirect(url_for('dashboard'))
             else:
                 return redirect(url_for('create_profile'))
-
         else:
             flash("Invalid username or password.")
-
+    
     return render_template("login.html", form=form)
 
 # Logout route
@@ -1246,32 +1276,32 @@ def get_conversation(contact_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# @app.route('/pin_contact', methods=['POST'])
-# @login_required
-# def pin_contact():
-#     data = request.get_json()  # Get the contact data
-#     contact_id = data.get('contact_id')  # The ID of the contact to be pinned
-#     is_pinned = data.get('is_pinned')  # The new pin status
+@app.route('/pin_contact', methods=['POST'])
+@login_required
+def pin_contact():
+    data = request.get_json()  # Get the contact data
+    contact_id = data.get('contact_id')  # The ID of the contact to be pinned
+    is_pinned = data.get('is_pinned')  # The new pin status
 
-#     if not contact_id:
-#         return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
+    if not contact_id:
+        return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
 
-#     # Find the user's contact list
-#     current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
+    # Find the user's contact list
+    current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
 
-#     if 'contacts' not in current_user_doc:
-#         return jsonify({'success': False, 'message': 'No contacts found.'}), 404
+    if 'contacts' not in current_user_doc:
+        return jsonify({'success': False, 'message': 'No contacts found.'}), 404
 
-#     # Update the pin status of the contact in the user's contact list
-#     updated = users_collection.update_one(
-#         {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
-#         {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
-#     )
+    # Update the pin status of the contact in the user's contact list
+    updated = users_collection.update_one(
+        {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
+        {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
+    )
 
-#     if updated.matched_count > 0:
-#         return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
-#     else:
-#         return jsonify({'success': False, 'message': 'Contact not found.'}), 404
+    if updated.matched_count > 0:
+        return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
+    else:
+        return jsonify({'success': False, 'message': 'Contact not found.'}), 404
  
 @app.route('/trashbin')
 @login_required

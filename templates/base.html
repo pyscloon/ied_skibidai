@@ -59,7 +59,7 @@
             <nav class="hidden md:flex space-x-6">
                 <a href="{{ url_for('index') }}#features" class="text-white hover:text-primary-400">Features</a>
                 {% if 'user_id' in session %}
-                <a href="{{ url_for('job_listings') }}" class="text-white hover:text-primary-400">Feed</a>
+                <a href="{{ url_for('jobs_projects_posting') }}" class="text-white hover:text-primary-400">Feed</a>
                 {% endif %}
                 <a href="{{ url_for('index') }}#pricing" class="text-white hover:text-primary-400">Pricing</a>
                 {% if 'user_id' in session %}
