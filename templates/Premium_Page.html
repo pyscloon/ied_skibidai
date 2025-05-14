@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebWork Pricing</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Modal styling */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 50;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.6);
+    }
+    
+    .modal-content {
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {transform: translateY(-50px); opacity: 0;}
+      to {transform: translateY(0); opacity: 1;}
+    }
+    
+    .close-modal:hover {
+      color: #e84118;
+      cursor: pointer;
+    }
+    
+    /* Form input focus styling */
+    .form-input:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50">
+  <!-- Navigation Bar -->
+  <nav class="bg-slate-900 text-white p-4">
+    <div class="container mx-auto flex flex-wrap items-center justify-between">
+      <div class="flex items-center">
+        <h1 class="text-3xl font-bold">WebWork</h1>
+      </div>
+      
+      <div class="relative mt-2 md:mt-0 md:mx-4 flex-grow max-w-md">
+        <div class="relative">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search"
+            class="w-full px-4 py-2 pl-10 rounded-full text-slate-900"
+          />
+          <span class="absolute left-3 top-2.5 text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+        </div>
+      </div>
+      
+      <div class="flex items-center mt-2 md:mt-0 space-x-4">
+        <a href="#" class="hover:text-orange-400">About</a>
+        <a href="#" class="hover:text-orange-400">Contact</a>
+        <a href="#" class="hover:text-orange-400">Login</a>
+        <a href="#" class="hover:text-orange-400">Sign in</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container mx-auto py-12 px-4">
+    <!-- Logo and Title -->
+    <div class="flex flex-col items-center mb-16">
+      <div class="w-40 h-40 mb-6">
+        <div class="relative w-full h-full">
+          <div class="text-orange-600 text-9xl font-bold absolute top-0 left-0 right-0 text-center">W</div>
+          <div class="absolute bottom-1 left-0 right-0 flex justify-center">
+            <!-- Globe Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <h2 class="text-3xl font-bold text-orange-600 text-center">Want to get Verified?</h2>
+    </div>
+    
+    <!-- Pricing Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      <!-- Monthly Plan -->
+      <div class="bg-slate-900 rounded-lg overflow-hidden shadow-lg text-white p-8">
+        <div class="mb-6">
+          <h3 class="text-2xl font-bold mb-6">₱550 / 1 month</h3>
+          
+          <div class="space-y-4">
+            <div class="flex items-center">
+              <!-- Check Icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-orange-500">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Verification Badge</span>
+            </div>
+            <div class="flex items-center">
+              <span class="mr-2">📊</span>
+              <span>Professional Dashboard Analysis</span>
+            </div>
+            <div class="flex items-center">
+              <!-- Zap Icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-orange-500">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Algorithm Priority</span>
+            </div>
+          </div>
+        </div>
+        
+        <button class="login-btn w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-md mt-4" data-plan="monthly" data-price="550">
+          Login to Subscribe
+        </button>
+      </div>
+      
+      <!-- Six Month Plan -->
+      <div class="bg-slate-900 rounded-lg overflow-hidden shadow-lg text-white p-8">
+        <div class="mb-6">
+          <h3 class="text-2xl font-bold mb-6">₱880 / 6 month</h3>
+          
+          <div class="space-y-4">
+            <div class="flex items-center">
+              <!-- Check Icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-orange-500">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Verification Badge</span>
+            </div>
+            <div class="flex items-center">
+              <span class="mr-2">📊</span>
+              <span>Professional Dashboard Analysis</span>
+            </div>
+            <div class="flex items-center">
+              <!-- Zap Icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-orange-500">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Algorithm Priority</span>
+            </div>
+          </div>
+        </div>
+        
+        <button class="login-btn w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-md mt-4" data-plan="semi-annual" data-price="880">
+          Login to Subscribe
+        </button>
+      </div>
+      
+      <!-- Annual Plan -->
+      <div class="bg-slate-900 rounded-lg overflow-hidden shadow-lg text-white p-8">
+        <div class="mb-6">
+          <h3 class="text-2xl font-bold mb-6">₱1,160 / 1 year</h3>
+          
+          <div class="space-y-4">
+            <div class="flex items-center">
+              <!-- Check Icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-orange-500">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Verification Badge</span>
+            </div>
+            <div class="flex items-center">
+              <span class="mr-2">📊</span>
+              <span>Professional Dashboard Analysis</span>
+            </div>
+            <div class="flex items-center">
+              <!-- Zap Icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-orange-500">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Algorithm Priority</span>
+            </div>
+          </div>
+        </div>
+        
+        <button class="login-btn w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-md mt-4" data-plan="annual" data-price="1,160">
+          Login to Subscribe
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="modal">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="modal-content bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-2xl font-bold text-slate-900">Login to Subscribe</h3>
+            <span class="close-modal text-gray-500 text-2xl font-bold">&times;</span>
+          </div>
+          
+          <div class="mb-2 text-slate-700">
+            <p>You've selected: <span id="selectedPlan" class="font-medium"></span> (₱<span id="selectedPrice"></span>)</p>
+          </div>
+          
+          <form id="loginForm" class="mt-4">
+            <div class="mb-4"> 
+              <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email Address</label>
+              <input type="email" id="email" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none" required>
+            </div>
+            
+            <div class="mb-6">
+              <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+              <input type="password" id="password" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none" required>
+              <p class="text-xs mt-1 text-right"><a href="#" class="text-orange-600 hover:text-orange-800">Forgot password?</a></p>
+            </div>
+            
+            <div class="mb-4">
+              <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline">
+                Login & Subscribe
+              </button>
+            </div>
+            
+            <div class="text-center text-sm">
+              <p>Don't have an account? <a href="#" class="text-orange-600 hover:text-orange-800">Sign up</a></p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="successModal" class="modal">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="modal-content bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-2xl font-bold text-slate-900">Subscription Successful!</h3>
+            <span class="close-modal text-gray-500 text-2xl font-bold">&times;</span>
+          </div>
+          
+          <div class="mb-6 text-slate-700">
+            <p class="mb-2">Thank you for subscribing to WebWork!</p>
+            <p>Your <span id="confirmedPlan" class="font-medium"></span> subscription has been activated.</p>
+            <div class="mt-4 bg-green-50 border border-green-200 rounded-md p-3">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-green-500">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span class="text-green-800">Your account is now verified!</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <button id="goToDashboard" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:shadow-outline">
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Elements
+      const loginButtons = document.querySelectorAll('.login-btn');
+      const loginModal = document.getElementById('loginModal');
+      const successModal = document.getElementById('successModal');
+      const closeButtons = document.querySelectorAll('.close-modal');
+      const loginForm = document.getElementById('loginForm');
+      const selectedPlanElement = document.getElementById('selectedPlan');
+      const selectedPriceElement = document.getElementById('selectedPrice');
+      const confirmedPlanElement = document.getElementById('confirmedPlan');
+      const dashboardButton = document.getElementById('goToDashboard');
+      
+      // Current plan data
+      let currentPlan = '';
+      let currentPrice = '';
+      
+      // Show the login modal when a subscription button is clicked
+      loginButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          currentPlan = this.getAttribute('data-plan');
+          currentPrice = this.getAttribute('data-price');
+          
+          // Display plan details in modal
+          let planDisplay = '';
+          switch(currentPlan) {
+            case 'monthly':
+              planDisplay = 'Monthly Plan';
+              break;
+            case 'semi-annual':
+              planDisplay = '6-Month Plan';
+              break;
+            case 'annual':
+              planDisplay = 'Annual Plan';
+              break;
+          }
+          
+          selectedPlanElement.textContent = planDisplay;
+          selectedPriceElement.textContent = currentPrice;
+          
+          // Show the modal
+          loginModal.style.display = 'block';
+        });
+      });
+      
+      // Close modals when clicking the X button
+      closeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          loginModal.style.display = 'none';
+          successModal.style.display = 'none';
+        });
+      });
+      
+      // Close modals when clicking outside modal content
+      window.addEventListener('click', function(event) {
+        if (event.target === loginModal) {
+          loginModal.style.display = 'none';
+        }
+        if (event.target === successModal) {
+          successModal.style.display = 'none';
+        }
+      });
+      
+      // Form submission
+      loginForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        // Simulate backend validation
+        if (!email || !password) {
+          alert('Please fill in all fields');
+          return;
+        }
+        
+        // Simulate API request
+        simulateBackendRequest(email, password, currentPlan, currentPrice)
+          .then(response => {
+            // Close login modal
+            loginModal.style.display = 'none';
+            
+            // Update success modal with plan details
+            let planDisplay = '';
+            switch(currentPlan) {
+              case 'monthly':
+                planDisplay = 'Monthly';
+                break;
+              case 'semi-annual':
+                planDisplay = '6-Month';
+                break;
+              case 'annual':
+                planDisplay = 'Annual';
+                break;
+            }
+            confirmedPlanElement.textContent = planDisplay;
+            
+            // Show success modal
+            successModal.style.display = 'block';
+            
+            // Reset form
+            loginForm.reset();
+          })
+          .catch(error => {
+            alert('Login failed: ' + error.message);
+          });
+      });
+      
+      // Go to dashboard button
+      dashboardButton.addEventListener('click', function() {
+        successModal.style.display = 'none';
+        alert('Redirecting to your dashboard...');
+      });
+      
+      // Simulate backend request with Promise
+      function simulateBackendRequest(email, password, plan, price) {
+        return new Promise((resolve, reject) => {
+          // Simulate network request with timeout
+          setTimeout(() => {
+            // For demo purposes, accept any valid email format
+            if (email.includes('@') && email.includes('.') && password.length >= 6) {
+              resolve({
+                success: true,
+                message: 'Subscription successful',
+                data: {
+                  user: { email },
+                  subscription: { plan, price }
+                }
+              });
+            } else {
+              reject({ 
+                success: false, 
+                message: 'Invalid email or password'
+              });
+            }
+          }, 1000);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebWork Pricing</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Modal styling */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 50;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.6);
+    }
+    .modal-content {
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {transform: translateY(-50px); opacity: 0;}
+      to {transform: translateY(0); opacity: 1;}
+    }
+    .close-modal:hover {
+      color: #e84118;
+      cursor: pointer;
+    }
+    .form-input:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50">
+
+  <!-- Include the full existing pricing + modal + login JS code here -->
+  <!-- ... this is already provided and stays the same -->
+
+  <!-- Stripe Integration -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe('pk_test_51RL1CB01UIFC9n2R0LXRBIWWXr5xb5Dw6igiy5U9a7V3jh2BOKDxo9SAWgvZrlnDgJGxF1RLnGl2FgEWCvAjzQBt005pNNUHvg'); // Replace with your actual public key
+
+    async function createCheckoutSession(planId) {
+      const response = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ planId })
+      });
+
+      const session = await response.json();
+      const result = await stripe.redirectToCheckout({ sessionId: session.id });
+
+      if (result.error) {
+        alert(result.error.message);
+      }
+    }
+  </script>
+
+</body>
+</html>
