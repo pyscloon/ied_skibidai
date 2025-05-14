@@ -13,21 +13,24 @@ from pymongo import MongoClient, errors
 from bson import ObjectId
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
+# Initialize flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sigmatauphigamma'
-CORS(app, supports_credentials=True)
-bcrypt = Bcrypt(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
-active_users = {}
+CORS(app, supports_credentials=True) 
+bcrypt = Bcrypt(app); """Bcrypt for hashing"""
+socketio = SocketIO(app, cors_allowed_origins="*"); """socketIO for real-time communication"""
+active_users = {}; """Dictionary to track active users"""
+
 # MongoDB setup
 MONGO_URI = "mongodb+srv://adminuser:Adminuser@cluster0.l5edo4g.mongodb.net/webwork?retryWrites=true&w=majority&appName=Cluster0"  
 client = MongoClient(MONGO_URI)
-db = client['webwork']
+db = client['webwork']; """main database"""
 users_collection = db['users']
-users_collection.create_index('username')
-users_collection.create_index('email')
-posts_collection = db['posts']
-businesses_collection = db['businesses']
+users_collection.create_index('username'); """indec fot username queries"""
+users_collection.create_index('email'); """index for email queries"""
+posts_collection = db['posts']; """store user posts"""
+businesses_collection = db['businesses']; """store business profiles"""
+# messages collection with multiple indexes for querying
 messages_collection = db['messages']
 messages_collection.create_index([('participants', 1), ('timestamp', -1)])
 messages_collection.create_index([('sender', 1), ('recipient', 1)])
@@ -35,23 +38,25 @@ messages_collection.create_index([('recipient', 1), ('sender', 1)])
 messages_collection.create_index([('recipient', 1), ('status', 1)])
 messages_collection.create_index('timestamp')
 messages_collection.create_index('persisted')
-conversations_collection = db['conversations']
-conversations_collection.create_index('participants')
-fs = gridfs.GridFS(db)
+conversations_collection = db['conversations']; """stores conversation metadata"""
+conversations_collection.create_index('participants'); '''index for participant queries'''
+fs = gridfs.GridFS(db); '''GridFS for file storage'''
 
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = "login"
+login_manager.login_view = "login"; '''Route for unauthorized access redirect'''
 
 # Helper for file upload
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'avi', 'pdf', 'docs'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# checks if a filename has an allowed extension
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# custom user class for flask-login that wraps MongoDB user documents
 class MongoUser(UserMixin):
     def __init__(self, user_data):
         self.user_data = user_data
@@ -62,10 +67,11 @@ class MongoUser(UserMixin):
         self.last_name = user_data.get('last_name', '')
         self.business_name = user_data.get('business_name', '')
 
+# required by flask-login to get user ID
     def get_id(self):
         return str(self.user_data['_id'])
 
-
+# flask-login user loader callback to get user from database
 @login_manager.user_loader
 def load_user(user_id):
     user = users_collection.find_one({'_id': ObjectId(user_id)})
@@ -140,13 +146,12 @@ class BusinessProfileForm(FlaskForm):
     bio = StringField('Business Bio', validators=[DataRequired()])
     submit = SubmitField('Finish Setup')
 
-# In your setup code
+# initialize job collection
 jobs_collection = db['jobs']
 
-# Then in your route:
-@app.route('/jobs-projects-posting')  # URL path can be whatever you want
-def jobs_projects_posting():  # This is the endpoint name for url_for()
-    # try:
+# display jobs_projects_posting
+@app.route('/jobs-projects-posting')  # URL path 
+def jobs_projects_posting(): 
         # Get jobs from MongoDB and convert to list
         jobs = list(jobs_collection.find({}, {'_id': 0}))  # Exclude MongoDB _id field
         
@@ -248,7 +253,7 @@ def add_contact():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 400
     
-
+# get list fo user not in current user's contacts.
 @app.route('/get_available_users')
 @login_required
 def get_available_users():
@@ -645,6 +650,7 @@ def create_profile():
     
     return render_template("create_profile.html", form=form)
 
+# business profile setup form
 @app.route('/business-setup', methods=['GET', 'POST'])
 @login_required
 def business_setup():
@@ -705,7 +711,7 @@ def upload_profile_picture():
 # Route to serve files from GridFS
 @app.route('/file/<file_id>')
 def get_file(file_id):
-    # Retrieve the file from GridFS
+    # Retrieve the file from GridFS by their ID
     file = fs.get(ObjectId(file_id))
     return file.read(), 200, {'Content-Type': file.content_type}
 
@@ -819,7 +825,7 @@ def create_post():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Get posts route
+# Get posts route. get all posts sorted by creation time
 @app.route('/posts', methods=['GET'])
 def get_posts():
     posts_cursor = posts_collection.find().sort('created_at_utc', -1)
@@ -840,7 +846,7 @@ def get_posts():
 
     return jsonify(result)
 
-# Add this to your app.py to fix existing posts
+# fixe post timestamps
 @app.route('/fix-post-times')
 @login_required
 def fix_post_times():
@@ -878,6 +884,7 @@ def fix_post_times():
     
     return f"Updated {updated_count} posts with proper timestamps"
 
+# search for users by name
 @app.route('/search-users')
 @login_required
 def search_users():
@@ -913,6 +920,7 @@ def search_users():
     
     return jsonify(result)
 
+# to view another user's profile
 @app.route('/profile/<user_id>')
 @login_required
 def view_profile(user_id):
@@ -1136,7 +1144,6 @@ def view_business_dashboard(business_id):
         flash("Error loading business", "error")
         return redirect(url_for('dashboard'))
 
-# Change this route
 @app.route('/profile_business/<business_id>', methods=['GET'])
 @login_required
 def profile_business(business_id):
@@ -1179,6 +1186,7 @@ def get_contacts():
     try:
         print(f"\n[DEBUG] Starting get_contacts for user: {current_user.id}")
 
+        # fetch all valid contacts of current user
         user = users_collection.find_one({'_id': ObjectId(current_user.id)})
         if not user or 'contacts' not in user:
             print("[DEBUG] No user or contacts found")
