@@ -110,9 +110,10 @@
             let timer;
             return (...args) => {
                 clearTimeout(timer);
-                timer = setTimeout(() => { func.apply(this, args); }, timeout);
+                timer = setTimeout(() => func(...args), timeout);
             };
         }
+
 
         // Search users function
         const searchUsers = debounce(async (query) => {
