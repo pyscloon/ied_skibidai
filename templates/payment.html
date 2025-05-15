@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscribe with Card</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe('pk_test_51RL1CB01UIFC9n2R0LXRBIWWXr5xb5Dw6igiy5U9a7V3jh2BOKDxo9SAWgvZrlnDgJGxF1RLnGl2FgEWCvAjzQBt005pNNUHvg'); // Replace with your Stripe **Publishable Key**
+  
+    const form = document.getElementById('paymentForm');
+  
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const formData = new FormData(form);
+  
+      const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        body: formData,
+      });
+  
+      const data = await res.json();
+      if (data.id) {
+        stripe.redirectToCheckout({ sessionId: data.id });
+      } else {
+        alert('Failed to start payment session');
+      }
+    });
+  </script>
+  
+  <form id="paymentForm" action="/subscribe" method="POST" enctype="multipart/form-data"
+        class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-lg space-y-5">
+    <h2 class="text-2xl font-bold text-center text-gray-800">Subscribe to WebWork</h2>
+
+    <!-- Login Required Message -->
+    <div id="loginPrompt" class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded relative text-sm hidden">
+      You must be <strong>logged in</strong> to subscribe.
+    </div>
+
+    <!-- Card Info -->
+    <div class="space-y-2">
+      <label class="block font-medium text-gray-700">Card Number</label>
+      <input name="cardNumber" type="text" required maxlength="19"
+             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+             placeholder="1234 5678 9012 3456" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block font-medium text-gray-700">Expiry</label>
+        <input name="expiry" type="text" required maxlength="5"
+               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+               placeholder="MM/YY" />
+      </div>
+      <div>
+        <label class="block font-medium text-gray-700">CVC</label>
+        <input name="cvc" type="text" required maxlength="4"
+               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+               placeholder="123" />
+      </div>
+    </div>
+
+    <!-- ID Upload -->
+    <div>
+      <label class="block font-medium text-gray-700">Upload Valid ID</label>
+      <input name="idUpload" type="file" accept=".jpg,.jpeg,.png,.pdf" required
+             class="w-full px-3 py-2 border rounded-lg bg-white file:mr-4 file:py-2 file:px-4 file:border-0 file:rounded-md file:bg-orange-600 file:text-white file:cursor-pointer" />
+    </div>
+
+    <!-- Submit -->
+    <button type="submit"
+            class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded-lg font-semibold transition">
+      Submit Payment
+    </button>
+  </form>
+
+  <script>
+    // Simulate a login check (replace with real logic)
+    const isLoggedIn = false; // <- set to true if the user is authenticated
+
+    const loginPrompt = document.getElementById('loginPrompt');
+    const paymentForm = document.getElementById('paymentForm');
+
+    if (!isLoggedIn) {
+      loginPrompt.classList.remove('hidden');
+      paymentForm.querySelector('button[type="submit"]').disabled = true;
+      paymentForm.querySelector('button[type="submit"]').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+  </script>
+</body>
+</html>
