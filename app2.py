@@ -1159,38 +1159,14 @@ def view_profile(user_id):
 @login_required
 def dashboard():
     user = users_collection.find_one({'_id': ObjectId(current_user.id)})
+    posts = list(posts_collection.find({'user_id': current_user.id}).sort('created_at_utc', -1))
+    businesses = list(businesses_collection.find({'owner_id': current_user.id}))
     
-    # Get user's posts with proper time handling
-    posts_cursor = posts_collection.find({'user_id': current_user.id}).sort('created_at_utc', -1)
-    posts = []
-    ph_tz = pytz.timezone('Asia/Manila')
-    
-    for post in posts_cursor:
-        # Use the local time if available, otherwise convert UTC to local
-        if 'created_at_local' in post and post['created_at_local']:
-            post_time = post['created_at_local']
-        else:
-            utc_time = post.get('created_at_utc', datetime.now(timezone.utc))
-            if isinstance(utc_time, str):
-                utc_time = datetime.strptime(utc_time, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
-            post_time = utc_time.astimezone(ph_tz)
-        
-        posts.append({
-            'content': post.get('content'),
-            'media': post.get('media', []),
-            'created_at': post_time,
-            '_id': post['_id']
-        })
-
-    # Get user's businesses
-    businesses_cursor = businesses_collection.find({'owner_id': current_user.id})
-    businesses = list(businesses_cursor)
-
-    return render_template('dashboard.html', 
-                         user=user, 
-                         posts=posts, 
+    return render_template('dashboard.html',
+                         user=user,
+                         posts=posts,
                          businesses=businesses,
-                         now=datetime.now(ph_tz))  # Pass current time in PH timezone
+                         now=datetime.now(pytz.timezone('Asia/Manila')))
     
 # Register route
 @app.route('/register', methods=['GET', 'POST'])

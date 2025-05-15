@@ -135,8 +135,6 @@
                                     {{ post.created_at_local.strftime('%b %d, %Y %I:%M %p') }}
                                 {% elif post.created_at_utc %}
                                     {{ post.created_at_utc.strftime('%b %d, %Y %I:%M %p') }}
-                                {% else %}
-                                    {{ now.strftime('%b %d, %Y %I:%M %p') }}
                                 {% endif %}
                             </p>
                         </div>
