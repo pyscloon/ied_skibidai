@@ -46,13 +46,6 @@
                 {% endif %}
             {% endwith %}
 
-            <button class="bg-[#d9561d] text-white border py-2 w-full rounded-xl mt-5 flex justify-center items-center text-sm hover:scale-105 duration-300">
-                <svg class="mr-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="black" viewBox="0 0 16 16">
-                    <path d="M15.545 6.558a9.4 9.4 0 0 1 .139 1.626..."/>
-                </svg>
-                Login with Google
-            </button>
-
             <div class="mt-6 text-center">
                 <p class="text-xs text-gray-500">Don't have an account?</p>
                 <a href="{{ url_for('register') }}">
@@ -60,9 +53,6 @@
                         Create Account
                     </button>
                 </a>
-                <div class="md:block hidden w-1/2">
-                    <img class="rounded-2x-1" src="webwork.png" alt="">  
-                </div>
             </div>
         </div>
     </section>

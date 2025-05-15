@@ -621,6 +621,215 @@ def mark_messages_read():
     
     return jsonify({'success': True})
 
+@app.route('/get_contacts', methods=['GET'])
+@login_required
+def get_contacts():
+    try:
+        print(f"\n[DEBUG] Starting get_contacts for user: {current_user.id}")
+
+        # fetch all valid contacts of current user
+        user = users_collection.find_one({'_id': ObjectId(current_user.id)})
+        if not user or 'contacts' not in user:
+            print("[DEBUG] No user or contacts found")
+            return jsonify({'contacts': []})
+
+        # Filter out deleted contacts
+        contacts = [contact for contact in user['contacts'] if not contact.get('is_deleted', False)]
+
+        contact_ids = [ObjectId(contact['contact_id']) for contact in contacts]
+        contact_users = list(users_collection.find(
+            {'_id': {'$in': contact_ids}},
+            {'username': 1, 'first_name': 1, 'last_name': 1, 'profile_picture': 1, 'last_seen': 1}
+        ))
+
+        user_map = {str(u['_id']): u for u in contact_users}
+        print(f"[DEBUG] Found {len(contact_users)} contact users")
+
+        contacts_result = []
+
+        for contact in contacts:
+            contact_id = str(contact['contact_id'])
+            contact_user = user_map.get(contact_id)
+            if not contact_user:
+                continue
+
+            # Always get the latest message between current_user and contact_id
+            last_msg = messages_collection.find_one({
+                '$or': [
+                    {'sender': current_user.id, 'recipient': contact_id},
+                    {'sender': contact_id, 'recipient': current_user.id}
+                ]
+            }, sort=[('timestamp', -1)])
+
+            last_message = last_msg['content'] if last_msg else 'No messages yet'
+            updated_at = last_msg['timestamp'] if last_msg else datetime.utcnow()
+
+            # Get unread count by counting messages from contact_id to current_user not marked as read
+            unread_count = messages_collection.count_documents({
+                'sender': contact_id,
+                'recipient': current_user.id,
+                'read': False
+            })
+
+            contacts_result.append({
+                'user_id': contact_id,
+                'name': f"{contact_user.get('first_name', '')} {contact_user.get('last_name', '')}".strip(),
+                'profile_picture': contact_user.get('profile_picture'),
+                'last_message': last_message,
+                'unread_count': unread_count,
+                'updated_at': updated_at.isoformat() if isinstance(updated_at, datetime) else updated_at,
+                'status': 'online' if contact_user.get('last_seen') == 'online' else 'offline',
+                'is_pinned': contact.get('is_pinned', False)
+            })
+
+        # Sort by pinned first, then recent updates
+        contacts_result.sort(key=lambda x: (not x['is_pinned'], x['updated_at']), reverse=True)
+
+        print(f"[DEBUG] Returning {len(contacts_result)} contacts")
+        return jsonify({'contacts': contacts_result})
+
+    except Exception as e:
+        print(f"[ERROR] get_contacts failed: {e}")
+        return jsonify({'error': 'Failed to fetch contacts'}), 500
+
+@app.route('/get_conversation/<contact_id>')
+@login_required
+def get_conversation(contact_id):
+    try:
+        # Validate contact exists
+        if not users_collection.find_one({'_id': ObjectId(contact_id)}):
+            return jsonify({'error': 'Contact not found'}), 404
+
+        # Get conversation messages with proper sender/recipient info
+        messages = messages_collection.find({
+            '$or': [
+                {'sender': current_user.id, 'recipient': contact_id},
+                {'sender': contact_id, 'recipient': current_user.id}
+            ]
+        }).sort('timestamp', 1)
+
+        messages_list = []
+        for msg in messages:
+            messages_list.append({
+                'id': str(msg['_id']),
+                'sender': str(msg['sender']),  # Ensure string type
+                'recipient': str(msg['recipient']),  # Ensure string type
+                'content': msg['content'],
+                'timestamp': msg['timestamp'].isoformat(),
+                'status': msg.get('status', 'sent'),
+                'is_current_user': str(msg['sender']) == current_user.id  # Add explicit flag
+            })
+
+        return jsonify({'messages': messages_list, 'current_user_id': current_user.id})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/pin_contact', methods=['POST'])
+@login_required
+def pin_contact():
+    data = request.get_json()  # Get the contact data
+    contact_id = data.get('contact_id')  # The ID of the contact to be pinned
+    is_pinned = data.get('is_pinned')  # The new pin status
+
+    if not contact_id:
+        return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
+
+    # Find the user's contact list
+    current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
+
+    if 'contacts' not in current_user_doc:
+        return jsonify({'success': False, 'message': 'No contacts found.'}), 404
+
+    # Update the pin status of the contact in the user's contact list
+    updated = users_collection.update_one(
+        {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
+        {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
+    )
+
+    if updated.matched_count > 0:
+        return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
+    else:
+        return jsonify({'success': False, 'message': 'Contact not found.'}), 404
+ 
+@app.route('/trashbin')
+@login_required
+def trashbin():
+    pipeline = [
+        {"$match": {"_id": ObjectId(current_user.id)}},
+        {"$unwind": {"path": "$contacts", "preserveNullAndEmptyArrays": True}},
+        {"$match": {"contacts.is_deleted": True}},
+        {
+            "$set": {
+                "contact_obj_id": {
+                    "$convert": {
+                        "input": "$contacts.contact_id",
+                        "to": "objectId",
+                        "onError": None,
+                        "onNull": None
+                    }
+                }
+            }
+        },
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "contact_obj_id",
+                "foreignField": "_id",
+                "as": "deleted_user"
+            }
+        },
+        {"$unwind": {"path": "$deleted_user", "preserveNullAndEmptyArrays": True}},
+        {
+            "$project": {
+                "contact_id": "$contacts.contact_id",
+                "name": "$deleted_user.name",
+                "profile_picture": "$deleted_user.profile_picture",
+                "sender_id": "$contacts.contact_id"
+            }
+        }
+    ]
+
+    deleted_contacts = list(users_collection.aggregate(pipeline))
+    return render_template("trashbin.html", deleted_contacts=deleted_contacts)
+
+
+@app.route('/delete_contact', methods=['POST'])
+@login_required
+def delete_contact():
+    data = request.json
+    contact_id = data.get("contact_id")
+    print(f"[DEBUG] Attempting to delete contact with ID: {contact_id}")  # Debugging line
+
+    # Fetch the user from the database
+    user = users_collection.find_one({"_id": ObjectId(current_user.id)})
+    if not user:
+        return jsonify({"success": False, "message": "User not found"}), 404
+
+    # Find the contact in the user's contacts list and mark it as deleted
+    contact_index = next((index for index, contact in enumerate(user.get('contacts', [])) 
+                         if str(contact.get('contact_id')) == contact_id), None)
+
+    if contact_index is None:
+        return jsonify({"success": False, "message": "Contact not found"}), 404
+
+    # Update the contact to mark it as deleted (soft delete)
+    result = users_collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {
+            "$set": {
+                f"contacts.{contact_index}.is_deleted": True  # Mark the contact as deleted
+            }
+        }
+    )
+
+    print(f"[DEBUG] MongoDB update result: {result.modified_count}")  # Debugging line
+
+    if result.modified_count > 0:
+        return jsonify({"success": True})
+    
+    return jsonify({"success": False, "message": "Failed to delete contact"}), 500
+
 @socketio.on_error_default
 def default_error_handler(e):
     print(f"Socket.IO error: {str(e)}")
@@ -1178,216 +1387,6 @@ def profile_business(business_id):
     except Exception as e:
         flash("Error loading business profile", "error")
         return redirect(url_for('dashboard'))
-
-
-@app.route('/get_contacts', methods=['GET'])
-@login_required
-def get_contacts():
-    try:
-        print(f"\n[DEBUG] Starting get_contacts for user: {current_user.id}")
-
-        # fetch all valid contacts of current user
-        user = users_collection.find_one({'_id': ObjectId(current_user.id)})
-        if not user or 'contacts' not in user:
-            print("[DEBUG] No user or contacts found")
-            return jsonify({'contacts': []})
-
-        # Filter out deleted contacts
-        contacts = [contact for contact in user['contacts'] if not contact.get('is_deleted', False)]
-
-        contact_ids = [ObjectId(contact['contact_id']) for contact in contacts]
-        contact_users = list(users_collection.find(
-            {'_id': {'$in': contact_ids}},
-            {'username': 1, 'first_name': 1, 'last_name': 1, 'profile_picture': 1, 'last_seen': 1}
-        ))
-
-        user_map = {str(u['_id']): u for u in contact_users}
-        print(f"[DEBUG] Found {len(contact_users)} contact users")
-
-        contacts_result = []
-
-        for contact in contacts:
-            contact_id = str(contact['contact_id'])
-            contact_user = user_map.get(contact_id)
-            if not contact_user:
-                continue
-
-            # Always get the latest message between current_user and contact_id
-            last_msg = messages_collection.find_one({
-                '$or': [
-                    {'sender': current_user.id, 'recipient': contact_id},
-                    {'sender': contact_id, 'recipient': current_user.id}
-                ]
-            }, sort=[('timestamp', -1)])
-
-            last_message = last_msg['content'] if last_msg else 'No messages yet'
-            updated_at = last_msg['timestamp'] if last_msg else datetime.utcnow()
-
-            # Get unread count by counting messages from contact_id to current_user not marked as read
-            unread_count = messages_collection.count_documents({
-                'sender': contact_id,
-                'recipient': current_user.id,
-                'read': False
-            })
-
-            contacts_result.append({
-                'user_id': contact_id,
-                'name': f"{contact_user.get('first_name', '')} {contact_user.get('last_name', '')}".strip(),
-                'profile_picture': contact_user.get('profile_picture'),
-                'last_message': last_message,
-                'unread_count': unread_count,
-                'updated_at': updated_at.isoformat() if isinstance(updated_at, datetime) else updated_at,
-                'status': 'online' if contact_user.get('last_seen') == 'online' else 'offline',
-                'is_pinned': contact.get('is_pinned', False)
-            })
-
-        # Sort by pinned first, then recent updates
-        contacts_result.sort(key=lambda x: (not x['is_pinned'], x['updated_at']), reverse=True)
-
-        print(f"[DEBUG] Returning {len(contacts_result)} contacts")
-        return jsonify({'contacts': contacts_result})
-
-    except Exception as e:
-        print(f"[ERROR] get_contacts failed: {e}")
-        return jsonify({'error': 'Failed to fetch contacts'}), 500
-
-@app.route('/get_conversation/<contact_id>')
-@login_required
-def get_conversation(contact_id):
-    try:
-        # Validate contact exists
-        if not users_collection.find_one({'_id': ObjectId(contact_id)}):
-            return jsonify({'error': 'Contact not found'}), 404
-
-        # Get conversation messages with proper sender/recipient info
-        messages = messages_collection.find({
-            '$or': [
-                {'sender': current_user.id, 'recipient': contact_id},
-                {'sender': contact_id, 'recipient': current_user.id}
-            ]
-        }).sort('timestamp', 1)
-
-        messages_list = []
-        for msg in messages:
-            messages_list.append({
-                'id': str(msg['_id']),
-                'sender': str(msg['sender']),  # Ensure string type
-                'recipient': str(msg['recipient']),  # Ensure string type
-                'content': msg['content'],
-                'timestamp': msg['timestamp'].isoformat(),
-                'status': msg.get('status', 'sent'),
-                'is_current_user': str(msg['sender']) == current_user.id  # Add explicit flag
-            })
-
-        return jsonify({'messages': messages_list, 'current_user_id': current_user.id})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/pin_contact', methods=['POST'])
-@login_required
-def pin_contact():
-    data = request.get_json()  # Get the contact data
-    contact_id = data.get('contact_id')  # The ID of the contact to be pinned
-    is_pinned = data.get('is_pinned')  # The new pin status
-
-    if not contact_id:
-        return jsonify({'success': False, 'message': 'Contact ID is required.'}), 400
-
-    # Find the user's contact list
-    current_user_doc = users_collection.find_one({'_id': ObjectId(current_user.id)})
-
-    if 'contacts' not in current_user_doc:
-        return jsonify({'success': False, 'message': 'No contacts found.'}), 404
-
-    # Update the pin status of the contact in the user's contact list
-    updated = users_collection.update_one(
-        {'_id': ObjectId(current_user.id), 'contacts.contact_id': ObjectId(contact_id)},
-        {'$set': {'contacts.$.is_pinned': is_pinned}}  # Update the is_pinned status
-    )
-
-    if updated.matched_count > 0:
-        return jsonify({'success': True, 'message': 'Pin status updated successfully.'}), 200
-    else:
-        return jsonify({'success': False, 'message': 'Contact not found.'}), 404
- 
-@app.route('/trashbin')
-@login_required
-def trashbin():
-    pipeline = [
-        {"$match": {"_id": ObjectId(current_user.id)}},
-        {"$unwind": {"path": "$contacts", "preserveNullAndEmptyArrays": True}},
-        {"$match": {"contacts.is_deleted": True}},
-        {
-            "$set": {
-                "contact_obj_id": {
-                    "$convert": {
-                        "input": "$contacts.contact_id",
-                        "to": "objectId",
-                        "onError": None,
-                        "onNull": None
-                    }
-                }
-            }
-        },
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "contact_obj_id",
-                "foreignField": "_id",
-                "as": "deleted_user"
-            }
-        },
-        {"$unwind": {"path": "$deleted_user", "preserveNullAndEmptyArrays": True}},
-        {
-            "$project": {
-                "contact_id": "$contacts.contact_id",
-                "name": "$deleted_user.name",
-                "profile_picture": "$deleted_user.profile_picture",
-                "sender_id": "$contacts.contact_id"
-            }
-        }
-    ]
-
-    deleted_contacts = list(users_collection.aggregate(pipeline))
-    return render_template("trashbin.html", deleted_contacts=deleted_contacts)
-
-
-@app.route('/delete_contact', methods=['POST'])
-@login_required
-def delete_contact():
-    data = request.json
-    contact_id = data.get("contact_id")
-    print(f"[DEBUG] Attempting to delete contact with ID: {contact_id}")  # Debugging line
-
-    # Fetch the user from the database
-    user = users_collection.find_one({"_id": ObjectId(current_user.id)})
-    if not user:
-        return jsonify({"success": False, "message": "User not found"}), 404
-
-    # Find the contact in the user's contacts list and mark it as deleted
-    contact_index = next((index for index, contact in enumerate(user.get('contacts', [])) 
-                         if str(contact.get('contact_id')) == contact_id), None)
-
-    if contact_index is None:
-        return jsonify({"success": False, "message": "Contact not found"}), 404
-
-    # Update the contact to mark it as deleted (soft delete)
-    result = users_collection.update_one(
-        {"_id": ObjectId(current_user.id)},
-        {
-            "$set": {
-                f"contacts.{contact_index}.is_deleted": True  # Mark the contact as deleted
-            }
-        }
-    )
-
-    print(f"[DEBUG] MongoDB update result: {result.modified_count}")  # Debugging line
-
-    if result.modified_count > 0:
-        return jsonify({"success": True})
-    
-    return jsonify({"success": False, "message": "Failed to delete contact"}), 500
 
 
 if __name__ == '__main__':
