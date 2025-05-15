@@ -135,7 +135,9 @@
                         <div>
                             <p class="font-semibold">{{ user.first_name }} {{ user.last_name }}</p>
                             <p class="text-xs text-gray-500">
-                                {% if post.created_at_local %}
+                                {% if post.created_at_display %}
+                                    {{ post.created_at_display }}
+                                {% elif post.created_at_local %}
                                     {{ post.created_at_local.strftime('%b %d, %Y %I:%M %p') }}
                                 {% elif post.created_at_utc %}
                                     {{ post.created_at_utc.strftime('%b %d, %Y %I:%M %p') }}

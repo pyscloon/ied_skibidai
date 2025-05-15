@@ -77,12 +77,6 @@
             
                 <div class="flex flex-col items-center">
                     <a href="{{ url_for('messagereq') }}"mb-4"><img src="/static/message.png" alt="Messages" class="w-10 h-10"></a>
-                    <a href="{{ url_for('trashbin') }}"" class="mb-4"><img src="/static/trash can.png" alt="Trash" class="w-10 h-10"></a>
-                </div>
-                <div class="mt-auto pt-5 border-t border-opacity-10 border-white">
-                    <a href="settings.html" class="flex justify-center items-center w-10 h-10">  
-                        <img src="/static/settings.png" alt="Settings" class="w-10 h-10">
-                    </a>
                 </div>
             </aside>
 
@@ -903,15 +897,6 @@
                                         ${formatTime(data.contact.updated_at)}
                                     </span>
 
-                                    <button class="delete-button w-7 h-7 bg-white rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors" data-id="${data.contact.user_id}">
-                                        <img src="/static/trash can.png" alt="delete contact" class="w-4 h-4">
-                                    </button>
-
-                                    <button onclick="togglePin(this, '${data.contact.user_id}', ${data.contact.is_pinned})"
-                                            data-pinned="${data.contact.is_pinned}"
-                                            class="w-7 h-7 bg-[#202c34] ${data.contact.is_pinned ? 'text-yellow-400' : 'text-white'} text-lg rounded-full flex items-center justify-center hover:bg-[#2c3e50] transition-colors">
-                                        ★
-                                    </button>
                                 </div>
                             </div>
 
